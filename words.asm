@@ -64,8 +64,8 @@ tick_int:
 int:
 	; 1. FRAMES D+! \ increment FRAMES
 	DX forth_two_literal_raw-2
-	DW 1
 	DW 0
+	DW 1
 	DX frames-2
 	DX forth_d_plus_store-2
 	; ;
