@@ -1004,13 +1004,13 @@ forth_two_store:
 	POP HL
 	POP BC
 	POP DE
-	LD (HL), E
-	INC HL
-	LD (HL), D
-	INC HL
 	LD (HL), C
 	INC HL
 	LD (HL), B
+	INC HL
+	LD (HL), E
+	INC HL
+	LD (HL), D
 	JP forth_next
 
 
@@ -1089,8 +1089,8 @@ forth_two_fetch:
 	LD C, (HL)
 	INC HL
 	LD B, (HL)
-	PUSH DE
 	PUSH BC
+	PUSH DE
 	JP forth_next
 
 
@@ -2112,7 +2112,7 @@ forth_two_literal_raw__dict:
 	DW forth_d_plus__dict
 	DB 10
 	DM "(2LITERAL)"
-	DW $ + 2
+	DW forth_colon_code
 forth_two_literal_raw:
 	DB forth_r_from_tok
 	DB forth_dup_tok
