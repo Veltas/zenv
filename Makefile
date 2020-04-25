@@ -6,7 +6,7 @@ clean:
 	rm -f zenv.bin zenv.tap zenv.lst
 
 #zenv-unpadded.bin: zenv.asm
-zenv.bin: zenv.asm
+zenv.bin: zenv.asm font.asm words.asm symbols.asm
 	sjasmplus --nologo $< --raw=$@ --lst=zenv.lst
 
 zenv.tap: zenv.bin

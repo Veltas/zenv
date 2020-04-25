@@ -18,6 +18,8 @@ ula_val: EQU 0xFE
 in_buf_val: EQU 0x5B00
 in_size_val: EQU 255
 keyq_len_val: EQU 8
+symbols: EQU attr_file_val + attr_size_val
+symbols_size: EQU symbols + 3*1024
 	; Address data stack starts at
 param_stack_top: EQU 0x90F0
 param_stack_size: EQU 0xE0
@@ -31,8 +33,15 @@ return_stack_size: EQU 0xE0
 
 	ORG 0x8000
 
-	; Init interrupt handler
 	DI
+
+	; Move symbols
+	LD DE, symbols
+	LD HL, builtin_symbols_start
+	LD BC, builtin_symbols_end - builtin_symbols_start
+	LDIR
+
+	; Init interrupt handler
 	LD A, 0x18 ; JR (to make 0xFFFF: JR 0xFFF4)
 	LD (0xFFFF), A
 
@@ -425,6 +434,11 @@ until_raw_tok: EQU ($-tokens)/2
 
 dictionary_start:
 	INCLUDE "words.asm"
-
-
 forth_h_init:
+
+
+builtin_symbols_start:
+	DISP symbols
+	INCLUDE "symbols.asm"
+	ENT
+builtin_symbols_end:

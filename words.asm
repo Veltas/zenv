@@ -1,102 +1,58 @@
 ; vim:set syntax=z80:
 
 ; Current data space pointer
-forth_h__dict:
-	DW 0
-	DB 1
-	DM "H"
 	DW forth_create_code
 forth_h:
 	DW forth_h_init
 
 
 ; non-zero while compiling
-forth_state__dict:
-	DW forth_h__dict
-	DB 5
-	DM "STATE"
 	DW forth_create_code
 forth_state:
 	DW 0
 
 
-frames__dict:
-	DW forth_state__dict
-	DB 6
-	DM "FRAMES"
 	DW forth_create_code
 frames:
 	DW 0
 	DW 0
 
 
-t_attr__dict:
-	DW frames__dict
-	DB 6
-	DM "T-ATTR"
 	DW forth_create_code
 t_attr:
 	DB 7
 
 
-t_col__dict:
-	DW t_attr__dict
-	DB 5
-	DM "T-COL"
 	DW forth_create_code
 t_col:
 	DB 0
 
 
-t_row__dict:
-	DW t_col__dict
-	DB 5
-	DM "T-ROW"
 	DW forth_create_code
 t_row:
 	DB 0
 
 
-display_file__dict:
-	DW t_row__dict
-	DB 12
-	DM "DISPLAY-FILE"
 	DW forth_constant_code
 display_file:
 	DW display_file_val
 
 
-display_size__dict:
-	DW display_file__dict
-	DB 12
-	DM "DISPLAY-SIZE"
 	DW forth_constant_code
 display_size:
 	DW display_size_val
 
 
-attr_file__dict:
-	DW display_size__dict
-	DB 12
-	DM "ATTR-FILE"
 	DW forth_constant_code
 attr_file:
 	DW attr_file_val
 
 
-attr_size__dict:
-	DW attr_file__dict
-	DB 12
-	DM "ATTR-SIZE"
 	DW forth_constant_code
 attr_size:
 	DW attr_size_val
 
 
-tick_int__dict:
-	DW attr_size__dict
-	DB 4
-	DM "'INT"
 	DW forth_create_code
 tick_int:
 	DW int
@@ -104,10 +60,6 @@ tick_int:
 
 	; Default interrupt handler
 	; : INT
-int__dict:
-	DW tick_int__dict
-	DB 3
-	DM "INT"
 	DW forth_colon_code
 int:
 	; 1. FRAMES D+! \ increment FRAMES
@@ -121,10 +73,6 @@ int:
 
 
 	; : MAIN  PAGE
-forth_main__dict:
-	DW int__dict
-	DB 4
-	DM "MAIN"
 	DW forth_colon_code
 forth_main:
 	; PAGE \ Clear screen
@@ -154,10 +102,6 @@ forth_main:
 	DB forth_exit_tok ; will never be reached
 
 
-forth_zero_literal__dict:
-	DW forth_main__dict
-	DB 1
-	DM "0"
 	DW $ + 2
 forth_zero_literal:
 	IF FORTH_CHECKED
@@ -168,10 +112,6 @@ forth_zero_literal:
 	JP forth_next
 
 
-forth_one_literal__dict:
-	DW forth_zero_literal__dict
-	DB 1
-	DM "1"
 	DW $ + 2
 forth_one_literal:
 	IF FORTH_CHECKED
@@ -182,10 +122,6 @@ forth_one_literal:
 	JP forth_next
 
 
-forth_literal_raw__dict:
-	DW forth_one_literal__dict
-	DB 9
-	DM "(LITERAL)"
 	DW $ + 2
 forth_literal_raw:
 	IF FORTH_CHECKED
@@ -200,10 +136,6 @@ forth_literal_raw:
 
 
 	; : SCROLL
-scroll__dict:
-	DW forth_literal_raw__dict
-	DB 5
-	DM "SCROLL"
 	DW forth_colon_code
 scroll:
 	; T-ROW C@ 8 -  0 MAX  T-ROW C!
@@ -249,10 +181,6 @@ scroll:
 
 
 	; : CR
-forth_cr__dict:
-	DW scroll__dict
-	DB 2
-	DM "CR"
 	DW forth_colon_code
 forth_cr:
 	; T-ROW C@ 22 > IF SCROLL THEN 1 T-ROW C+!
@@ -276,10 +204,6 @@ forth_cr:
 	DB forth_exit_tok
 
 
-forth_emit__dict:
-	DW forth_cr__dict
-	DB 4
-	DM "EMIT"
 	DW $ + 2
 forth_emit:
 	IF FORTH_CHECKED
@@ -397,19 +321,11 @@ forth_emit:
 	JP forth_next
 
 
-forth_bye__dict:
-	DW forth_emit__dict
-	DB 3
-	DM "BYE"
 	DW $ + 2
-forth_bye__param:
+forth_bye:
 	RST 0x00
 
 
-forth_store__dict:
-	DW forth_main__dict
-	DB 1
-	DM "!"
 	DW $ + 2
 forth_store:
 	IF FORTH_CHECKED
@@ -424,10 +340,6 @@ forth_store:
 
 
 	; : PAGE
-forth_page__dict:
-	DW forth_store__dict
-	DB 4
-	DM "PAGE"
 	DW forth_colon_code
 forth_page:
 	; 0 T-COL C!
@@ -452,10 +364,6 @@ forth_page:
 	DB forth_exit_tok
 
 
-forth_plus__dict:
-	DW forth_page__dict
-	DB 1
-	DM "+"
 	DW $ + 2
 forth_plus:
 	IF FORTH_CHECKED
@@ -468,10 +376,6 @@ forth_plus:
 	JP forth_next
 
 
-forth_minus__dict:
-	DW forth_plus__dict
-	DB 1
-	DM "-"
 	DW $ + 2
 forth_minus:
 	IF FORTH_CHECKED
@@ -485,10 +389,6 @@ forth_minus:
 	JP forth_next
 
 
-forth_zero_equals__dict:
-	DW forth_minus__dict
-	DB 2
-	DM "0="
 	DW $ + 2
 forth_zero_equals:
 	IF FORTH_CHECKED
@@ -507,10 +407,6 @@ forth_zero_equals:
 	JP forth_next
 
 
-forth_zero_less__dict:
-	DW forth_zero_equals__dict
-	DB 2
-	DM "0<"
 	DW $ + 2
 forth_zero_less:
 	IF FORTH_CHECKED
@@ -529,10 +425,6 @@ forth_zero_less:
 	JP forth_next
 
 
-forth_one_plus__dict:
-	DW forth_zero_less__dict
-	DB 2
-	DM "1+"
 	DW $ + 2
 forth_one_plus:
 	IF FORTH_CHECKED
@@ -543,18 +435,10 @@ forth_one_plus:
 	PUSH HL
 	JP forth_next
 
-
-forth_char_plus__dict:
-	DW forth_one_plus__dict
-	DB 5
-	DM "CHAR+"
 	DW forth_one_plus - 2
+forth_char_plus:
 
 
-forth_one_minus__dict:
-	DW forth_char_plus__dict
-	DB 2
-	DM "1-"
 	DW $ + 2
 forth_one_minus:
 	IF FORTH_CHECKED
@@ -566,10 +450,6 @@ forth_one_minus:
 	JP forth_next
 
 
-forth_two_store__dict:
-	DW forth_one_minus__dict
-	DB 2
-	DM "2!"
 	DW $ + 2
 forth_two_store:
 	IF FORTH_CHECKED
@@ -588,10 +468,6 @@ forth_two_store:
 	JP forth_next
 
 
-forth_two_star__dict:
-	DW forth_two_store__dict
-	DB 2
-	DM "2*"
 	DW $ + 2
 forth_two_star:
 	IF FORTH_CHECKED
@@ -604,18 +480,10 @@ forth_two_star:
 	JP forth_next
 
 
-forth_cells__dict:
-	DW forth_two_star__dict
-	DB 5
-	DM "CELLS"
 	DW forth_two_star
 forth_cells:
 
 
-forth_exit__dict:
-	DW forth_cells__dict
-	DB 4
-	DM "EXIT"
 	DW $ + 2
 forth_exit:
 	IF FORTH_CHECKED
@@ -630,10 +498,6 @@ forth_exit:
 	JP forth_next
 
 
-forth_two_slash__dict:
-	DW forth_exit__dict
-	DB 2
-	DM "2/"
 	DW $ + 2
 forth_two_slash:
 	IF FORTH_CHECKED
@@ -646,10 +510,6 @@ forth_two_slash:
 	JP forth_next
 
 
-forth_two_fetch__dict:
-	DW forth_two_slash__dict
-	DB 2
-	DM "2@"
 	DW $ + 2
 forth_two_fetch:
 	IF FORTH_CHECKED
@@ -668,10 +528,6 @@ forth_two_fetch:
 	JP forth_next
 
 
-forth_two_drop__dict:
-	DW forth_two_fetch__dict
-	DB 5
-	DM "2DROP"
 	DW $ + 2
 forth_two_drop:
 	IF FORTH_CHECKED
@@ -682,10 +538,6 @@ forth_two_drop:
 	JP forth_next
 
 
-forth_two_dup__dict:
-	DW forth_two_drop__dict
-	DB 4
-	DM "2DUP"
 	DW $ + 2
 forth_two_dup:
 	IF FORTH_CHECKED
@@ -700,10 +552,6 @@ forth_two_dup:
 	JP forth_next
 
 
-forth_two_over__dict:
-	DW forth_two_dup__dict
-	DB 5
-	DM "2OVER"
 	DW $ + 2
 forth_two_over:
 	IF FORTH_CHECKED
@@ -723,10 +571,6 @@ forth_two_over:
 	JP forth_next
 
 
-forth_to_r__dict:
-	DW forth_two_over__dict
-	DB 2
-	DM ">R"
 	DW $ + 2
 forth_to_r:
 	IF FORTH_CHECKED
@@ -740,10 +584,6 @@ forth_to_r:
 	JP forth_next
 
 
-forth_question_dup__dict:
-	DW forth_to_r__dict
-	DB 4
-	DM "?DUP"
 	DW $ + 2
 forth_question_dup:
 	IF FORTH_CHECKED
@@ -760,10 +600,6 @@ forth_question_dup:
 	JP forth_next
 
 
-forth_abort__dict:
-	DW forth_question_dup__dict
-	DB 5
-	DM "ABORT"
 	DW $ + 2
 forth_abort:
 	LD SP, param_stack_top
@@ -771,10 +607,6 @@ forth_abort:
 	JP forth_quit
 
 
-forth_abs__dict:
-	DW forth_abort__dict
-	DB 3
-	DM "ABS"
 	DW $ + 2
 forth_abs:
 	POP BC
@@ -791,31 +623,18 @@ forth_abs:
 	JP forth_next
 
 
-forth_align__dict:
-	DW forth_abs__dict
-	DB 0x85
-	DM "ALIGN"
 	DW forth_next
+forth_align:
 
 
-forth_aligned__dict:
-	DW forth_align__dict
-	DB 0x87
-	DM "ALIGNED"
 	DW forth_next
+forth_aligned:
 
 
-forth_chars__dict:
-	DW forth_aligned__dict
-	DB 0x85
-	DM "CHARS"
 	DW forth_next
+forth_chars:
 
 
-forth_allot__dict:
-	DW forth_chars__dict
-	DB 5
-	DM "ALLOT"
 	DW $ + 2
 forth_allot:
 	IF FORTH_CHECKED
@@ -828,10 +647,6 @@ forth_allot:
 	JP forth_next
 
 
-forth_and__dict:
-	DW forth_allot__dict
-	DB 3
-	DM "AND"
 	DW $ + 2
 forth_and:
 	IF FORTH_CHECKED
@@ -848,10 +663,7 @@ forth_and:
 	PUSH BC
 	JP forth_next
 
-forth_or__dict:
-	DW forth_and__dict
-	DB 2
-	DM "OR"
+
 	DW $ + 2
 forth_or:
 	IF FORTH_CHECKED
@@ -868,10 +680,7 @@ forth_or:
 	PUSH BC
 	JP forth_next
 
-forth_xor__dict:
-	DW forth_or__dict
-	DB 3
-	DM "XOR"
+
 	DW $ + 2
 forth_xor:
 	IF FORTH_CHECKED
@@ -889,19 +698,11 @@ forth_xor:
 	JP forth_next
 
 
-forth_bl__dict:
-	DW forth_xor__dict
-	DB 2
-	DM "BL"
 	DW forth_constant_code
 forth_bl:
 	DW ' '
 
 
-forth_c_store__dict:
-	DW forth_bl__dict
-	DB 2
-	DM "C!"
 	DW $ + 2
 forth_c_store:
 	IF FORTH_CHECKED
@@ -913,10 +714,6 @@ forth_c_store:
 	JP forth_next
 
 
-forth_c_comma__dict:
-	DW forth_c_store__dict
-	DB 2
-	DM "C,"
 	DW $ + 2
 forth_c_comma:
 	IF FORTH_CHECKED
@@ -930,10 +727,6 @@ forth_c_comma:
 	JP forth_next
 
 
-forth_c_fetch__dict:
-	DW forth_c_comma__dict
-	DB 2
-	DM "C@"
 	DW $ + 2
 forth_c_fetch:
 	IF FORTH_CHECKED
@@ -946,10 +739,6 @@ forth_c_fetch:
 	JP forth_next
 
 
-forth_cell_plus__dict:
-	DW forth_c_fetch__dict
-	DB 5
-	DM "CELL+"
 	DW $ + 2
 forth_cell_plus:
 	IF FORTH_CHECKED
@@ -962,10 +751,6 @@ forth_cell_plus:
 	JP forth_next
 
 
-forth_count__dict:
-	DW forth_cell_plus__dict
-	DB 5
-	DM "COUNT"
 	DW $ + 2
 forth_count:
 	IF FORTH_CHECKED
@@ -980,10 +765,6 @@ forth_count:
 	JP forth_next
 
 
-forth_depth__dict:
-	DW forth_count__dict
-	DB 5
-	DM "DEPTH"
 	DW forth_colon_code
 forth_depth:
 	DX forth_s_zero-2
@@ -993,10 +774,6 @@ forth_depth:
 	DB forth_exit_tok
 
 
-forth_drop__dict:
-	DW forth_depth__dict
-	DB 4
-	DM "DROP"
 	DW $ + 2
 forth_drop:
 	IF FORTH_CHECKED
@@ -1006,10 +783,6 @@ forth_drop:
 	JP forth_next
 
 
-forth_dup__dict:
-	DW forth_drop__dict
-	DB 3
-	DM "DUP"
 	DW $ + 2
 forth_dup:
 	IF FORTH_CHECKED
@@ -1022,10 +795,6 @@ forth_dup:
 
 
 	; : MAX 2DUP < IF SWAP THEN DROP ;
-forth_max__dict:
-	DW forth_dup__dict
-	DB 3
-	DM "MAX"
 	DW forth_colon_code
 forth_max:
 	DB forth_two_dup_tok
@@ -1038,10 +807,6 @@ forth_max:
 	DB forth_exit_tok
 
 
-forth_cmove__dict:
-	DW forth_max__dict
-	DB 5
-	DM "CMOVE"
 	DW $ + 2
 forth_cmove:
 	IF FORTH_CHECKED
@@ -1057,10 +822,6 @@ forth_cmove:
 	JP forth_next
 
 
-forth_cmove_up__dict:
-	DW forth_cmove__dict
-	DB 6
-	DM "CMOVE>"
 	DW $ + 2
 forth_cmove_up:
 	IF FORTH_CHECKED
@@ -1081,10 +842,6 @@ forth_cmove_up:
 	JP forth_next
 
 
-forth_move__dict:
-	DW forth_cmove_up__dict
-	DB 4
-	DM "MOVE"
 	DW forth_colon_code
 forth_move:
 	; : MOVE -ROT 2DUP < IF ROT CMOVE> ELSE ROT CMOVE THEN ;
@@ -1105,10 +862,6 @@ forth_move:
 
 
 	; : NEGATE  0 SWAP - ;
-forth_negate__dict:
-	DW forth_move__dict
-	DB 6
-	DM "NEGATE"
 	DW forth_colon_code
 forth_negate:
 	DB forth_zero_literal_tok
@@ -1117,10 +870,6 @@ forth_negate:
 	DB forth_exit_tok
 
 
-forth_question_do_raw__dict:
-	DW forth_negate__dict
-	DB 4
-	DM "(?DO)"
 	DW $ + 2
 forth_question_do_raw:
 	IF FORTH_CHECKED
@@ -1157,10 +906,6 @@ forth_question_do_raw:
 	JP forth_next
 
 
-forth_loop_raw__dict:
-	DW forth_question_do_raw__dict
-	DB 6
-	DM "(LOOP)"
 	DW $ + 2
 forth_loop_raw:
 	; DE = iterator
@@ -1190,10 +935,6 @@ forth_loop_raw:
 
 
 	; : TYPE 0 ?DO DUP C@ EMIT 1+ LOOP DROP ;
-forth_type__dict:
-	DW forth_loop_raw__dict
-	DB 4
-	DM "TYPE"
 	DW forth_colon_code
 forth_type:
 	DB forth_zero_literal_tok
@@ -1211,10 +952,6 @@ forth_type:
 	DB forth_exit_tok
 
 
-forth_s_quote_raw__dict:
-	DW forth_type__dict
-	DB 4
-	DM '(S")'
 	DW $ + 2
 forth_s_quote_raw:
 	IF FORTH_CHECKED
@@ -1232,10 +969,6 @@ forth_s_quote_raw:
 	JP forth_next
 
 
-forth_over__dict:
-	DW forth_s_quote_raw__dict
-	DB 4
-	DM "OVER"
 	DW $ + 2
 forth_over:
 	IF FORTH_CHECKED
@@ -1250,10 +983,6 @@ forth_over:
 	JP forth_next
 
 
-forth_reset_stacks__dict:
-	DW forth_over__dict
-	DB 12
-	DM "RESET-STACKS"
 	DW $ + 2
 forth_reset_stacks:
 	LD IX, return_stack_top
@@ -1261,10 +990,6 @@ forth_reset_stacks:
 	JP forth_next
 
 
-forth_quit__dict:
-	DW forth_reset_stacks__dict
-	DB 4
-	DM "QUIT"
 	DW forth_colon_code
 forth_quit:
 	; : QUIT  BEGIN -' IF NUMBER ELSE EXECUTE THEN 0 UNTIL ;
@@ -1274,10 +999,6 @@ forth_quit:
 
 
 	; : ERASE 0 FILL ;
-forth_erase__dict:
-	DW forth_quit__dict
-	DB 5
-	DM "ERASE"
 	DW forth_colon_code
 forth_erase:
 	DB forth_zero_literal_tok
@@ -1285,10 +1006,6 @@ forth_erase:
 	DB forth_exit_tok
 
 
-forth_fill__dict:
-	DW forth_erase__dict
-	DB 4
-	DM "FILL"
 	DW $ + 2
 forth_fill:
 	IF FORTH_CHECKED
@@ -1312,10 +1029,6 @@ forth_fill:
 	JP forth_next
 
 
-forth_fetch__dict:
-	DW forth_fill__dict
-	DB 1
-	DM "@"
 	DW $ + 2
 forth_fetch:
 	IF FORTH_CHECKED
@@ -1329,10 +1042,6 @@ forth_fetch:
 	JP forth_next
 
 
-forth_tick_s__dict:
-	DW forth_fetch__dict
-	DB 2
-	DM "'S"
 	DW $ + 2
 forth_tick_s:
 	IF FORTH_CHECKED
@@ -1344,10 +1053,6 @@ forth_tick_s:
 	JP forth_next
 
 
-forth_rot__dict:
-	DW forth_tick_s__dict
-	DB 3
-	DM "ROT"
 	DW $ + 2
 forth_rot:
 	IF FORTH_CHECKED
@@ -1362,10 +1067,6 @@ forth_rot:
 	JP forth_next
 
 
-forth_swap__dict:
-	DW forth_rot__dict
-	DB 4
-	DM "SWAP"
 	DW $ + 2
 forth_swap:
 	IF FORTH_CHECKED
@@ -1378,54 +1079,30 @@ forth_swap:
 	JP forth_next
 
 
-forth_s_zero__dict:
-	DW forth_swap__dict
-	DB 2
-	DM "S0"
 	DW forth_constant_code
 forth_s_zero:
 	DW param_stack_top
 
 
-in_buf__dict:
-	DW forth_s_zero__dict
-	DB 6
-	DM "IN-BUF"
 	DW forth_constant_code
 in_buf:
 	DW in_buf_val
 
 
-in_size__dict:
-	DW in_buf__dict
-	DB 7
-	DM "IN-SIZE"
 	DW forth_constant_code
 in_size:
 	DW in_size_val
 
 
-forth_to_in__dict:
-	DW in_size__dict
-	DB 3
-	DM ">IN"
 	DW forth_constant_code
 forth_to_in:
 	; TODO
 
-forth_minus_tick__dict:
-	DW forth_to_in__dict
-	DB 2
-	DM "-'"
 	DW $ + 2
 forth_minus_tick:
 	; TODO
 
 
-forth_minus_rot__dict:
-	DW forth_minus_tick__dict
-	DB 4
-	DM "-ROT"
 	DW $ + 2
 forth_minus_rot:
 	IF FORTH_CHECKED
@@ -1440,10 +1117,6 @@ forth_minus_rot:
 	JP forth_next
 
 
-forth_less_than__dict:
-	DW forth_minus_rot__dict
-	DB 1
-	DM "<"
 	DW $ + 2
 forth_less_than:
 	IF FORTH_CHECKED
@@ -1468,10 +1141,6 @@ forth_less_than:
 
 
 	; : > SWAP < ;
-forth_greater_than__dict:
-	DW forth_less_than__dict
-	DB 1
-	DM ">"
 	DW forth_colon_code
 forth_greater_than:
 	DB forth_swap_tok
@@ -1479,10 +1148,6 @@ forth_greater_than:
 	DB forth_exit_tok
 
 
-forth_nip__dict:
-	DW forth_greater_than__dict
-	DB 3
-	DM "NIP"
 	DW $ + 2
 forth_nip:
 	IF FORTH_CHECKED
@@ -1494,10 +1159,6 @@ forth_nip:
 	JP forth_next
 
 
-forth_else_skip__dict:
-	DW forth_nip__dict
-	DB 6
-	DM "(ELSE)"
 	DW $ + 2
 forth_else_skip:
 	INC IY
@@ -1507,10 +1168,6 @@ forth_else_skip:
 	JP forth_next
 
 
-forth_c_plus_store__dict:
-	DW forth_else_skip__dict
-	DB 3
-	DM "C+!"
 	DW $ + 2
 forth_c_plus_store:
 	IF FORTH_CHECKED
@@ -1524,10 +1181,6 @@ forth_c_plus_store:
 	JP forth_next
 
 
-forth_c_literal__dict:
-	DW forth_c_plus_store__dict
-	DB 9
-	DM "C-LITERAL"
 	DW $ + 2
 forth_c_literal:
 	IF FORTH_CHECKED
@@ -1540,10 +1193,6 @@ forth_c_literal:
 	JP forth_next
 
 
-forth_if_raw__dict:
-	DW forth_c_literal__dict
-	DB 4
-	DM "(IF)"
 	DW $ + 2
 forth_if_raw:
 	IF FORTH_CHECKED
@@ -1561,10 +1210,6 @@ forth_if_raw:
 	JP forth_next
 
 
-forth_ms__dict:
-	DW forth_if_raw__dict
-	DB 2
-	DM "MS"
 	DW $ + 2
 forth_ms:
 	IF FORTH_CHECKED
@@ -1591,10 +1236,6 @@ forth_ms:
 	JR .ms__ms_loop
 
 
-forth_p_fetch__dict:
-	DW forth_ms__dict
-	DB 3
-	DM "P@"
 	DW $ + 2
 forth_p_fetch:
 	IF FORTH_CHECKED
@@ -1607,10 +1248,6 @@ forth_p_fetch:
 	JP forth_next
 
 
-forth_p_store__dict:
-	DW forth_p_fetch__dict
-	DB 3
-	DM "P!"
 	DW $ + 2
 forth_p_store:
 	IF FORTH_CHECKED
@@ -1622,19 +1259,11 @@ forth_p_store:
 	JP forth_next
 
 
-ula__dict:
-	DW forth_p_store__dict
-	DB 3
-	DM "ULA"
 	DW forth_constant_code
 ula:
 	DW ula_val
 
 
-halt__dict:
-	DW ula__dict
-	DB 4
-	DM "HALT"
 	DW $ + 2
 halt_:
 	HALT
@@ -1642,10 +1271,6 @@ halt_:
 
 
 	; : D+! ( n addr -- ) \ double in addr incremented by 2
-forth_d_plus_store__dict:
-	DW halt__dict
-	DB 4
-	DM "D1+!"
 	DW forth_colon_code
 forth_d_plus_store:
 	; DUP >R 2@ D+ R> 2! ;
@@ -1658,10 +1283,6 @@ forth_d_plus_store:
 	DB forth_exit_tok
 
 
-forth_d_plus__dict:
-	DW forth_d_plus_store__dict
-	DB 2
-	DM "D+"
 	DW $ + 2
 forth_d_plus:
 	IF FORTH_CHECKED
@@ -1682,10 +1303,6 @@ forth_d_plus:
 
 
 	; : (2LITERAL)  R>  DUP 2 CELLS + >R  2@  ;
-forth_two_literal_raw__dict:
-	DW forth_d_plus__dict
-	DB 10
-	DM "(2LITERAL)"
 	DW forth_colon_code
 forth_two_literal_raw:
 	DB forth_r_from_tok
@@ -1699,10 +1316,6 @@ forth_two_literal_raw:
 	DB forth_exit_tok
 
 
-forth_r_from__dict:
-	DW forth_two_literal_raw__dict
-	DB 2
-	DM "R>"
 	DW $ + 2
 forth_r_from:
 	IF FORTH_CHECKED
@@ -1716,20 +1329,12 @@ forth_r_from:
 	JP forth_next
 
 
-_di__dict:
-	DW forth_r_from__dict
-	DB 2
-	DM "DI"
 	DW $ + 2
 _di:
 	DI
 	JP forth_next
 
 
-_ei__dict:
-	DW _di__dict
-	DB 2
-	DM "EI"
 	DW $ + 2
 _ei:
 	EI
@@ -1737,10 +1342,6 @@ _ei:
 
 
 	; AT-XY ( x y -- ) \ Set next terminal x,y position
-forth_at_xy__dict:
-	DW _ei__dict
-	DB 5
-	DM "AT-XY"
 	DW forth_colon_code
 forth_at_xy:
 	; ( y ) 0 23 CLAMP T-ROW C!
@@ -1761,10 +1362,6 @@ forth_at_xy:
 	DB forth_exit_tok
 
 
-keyq_len__dict:
-	DW forth_at_xy__dict
-	DB 8
-	DM "KEYQ-LEN"
 	DW forth_constant_code
 keyq_len:
 	DW keyq_len_val
@@ -1774,38 +1371,22 @@ keyq_len:
 	; byte 1 = scancode which is 8*(4-bit)+(8-hrow_bit)
 	;          (this gives an index into Key Table (a) in ROM disassembly)
 	; byte 2 = flags: 1=up, 2=shift, 4=sym
-keyq__dict:
-	DW keyq_len__dict
-	DB 4
-	DM "KEYQ"
 	DW forth_create_code
 keyq:
 	DS keyq_len_val * 2
 
 
-keyq_s__dict:
-	DW keyq__dict
-	DB 6
-	DM "KEYQ-S"
 	DW forth_create_code
 keyq_s:
 	DB 0
 
 
-keyq_e__dict:
-	DW keyq_s__dict
-	DB 6
-	DM "KEYQ-E"
 	DW forth_create_code
 keyq_e:
 	DB 0
 
 
 	; : EKEY? ( -- flags ) \ Is a key event available?
-ekey_question__dict:
-	DW keyq_e__dict
-	DB 5
-	DM "EKEY?"
 	DW forth_colon_code
 ekey_question:
 	; KEYQ-E C@ KEYQ-S C@ <> ;
@@ -1818,10 +1399,6 @@ ekey_question:
 
 
 	; 0<> ( n -- flags ) \ true if n is not equal to 0
-forth_zero_not_equals__dict:
-	DW ekey_question__dict
-	DB 3
-	DM "0<>"
 	DW forth_colon_code
 forth_zero_not_equals:
 	; 0= INVERT ;
@@ -1831,10 +1408,6 @@ forth_zero_not_equals:
 
 
 	; <> ( n1 n2 -- flags ) \ true if n1 is not equal to n2
-forth_not_equals__dict:
-	DW forth_zero_not_equals__dict
-	DB 2
-	DM "<>"
 	DW forth_colon_code
 forth_not_equals:
 	; = INVERT ;
@@ -1844,10 +1417,6 @@ forth_not_equals:
 
 
 	; CLAMP ( n1 n2 n3 -- n ) \ Force n1 to range [n2, n3]
-clamp__dict:
-	DW forth_not_equals__dict
-	DB 5
-	DM "CLAMP"
 	DW forth_colon_code
 clamp:
 	; ROT MIN MAX ;
@@ -1858,10 +1427,6 @@ clamp:
 
 
 	; : MIN ( n1 n2 -- n ) \ Leave the smaller of n1 and n2
-forth_min__dict:
-	DW clamp__dict
-	DB 3
-	DM "MIN"
 	DW forth_colon_code
 forth_min:
 	; 2DUP > IF SWAP THEN DROP ;
@@ -1876,10 +1441,6 @@ forth_min:
 
 
 	; : INVERT ( x -- y ) \ Invert all bits of x
-forth_invert__dict:
-	DW forth_min__dict
-	DB 6
-	DM "INVERT"
 	DW $ + 2
 forth_invert:
 	IF FORTH_CHECKED
@@ -1897,10 +1458,6 @@ forth_invert:
 
 
 	; EKEY ( -- x ) \ Push keyboard event when ready
-ekey__dict:
-	DW forth_invert__dict
-	DB 4
-	DM "EKEY"
 	DW forth_colon_code
 ekey:
 	; BEGIN EKEY? UNTIL \ Wait for event
@@ -1918,10 +1475,6 @@ ekey:
 	; R@ C@ 1+ $7 AND R> C! ;
 
 
-until_raw__dict:
-	DW ekey__dict
-	DB 7
-	DM "(UNTIL)"
 	DW $ + 2
 until_raw:
 	IF FORTH_CHECKED
@@ -1945,10 +1498,6 @@ until_raw:
 	JP forth_next
 
 
-forth_equals__dict:
-	DW until_raw__dict
-	DB 1
-	DM "="
 	DW $ + 2
 forth_equals:
 	IF FORTH_CHECKED
@@ -1969,10 +1518,6 @@ forth_equals:
 	JP forth_next
 
 
-less_than_or_equal__dict:
-	DW forth_equals__dict
-	DB 2
-	DM "<="
 	DW forth_colon_code
 less_than_or_equal:
 	DB forth_greater_than_tok
@@ -1980,10 +1525,6 @@ less_than_or_equal:
 	DB forth_exit_tok
 
 
-greater_than_or_equal__dict:
-	DW less_than_or_equal__dict
-	DB 2
-	DM ">="
 	DW forth_colon_code
 greater_than_or_equal:
 	DB forth_less_than_tok
