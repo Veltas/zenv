@@ -87,6 +87,13 @@ interrupt:
 	ADD IX, BC ; Leave room on return stack, less likely to clobber bad asm
 
 	; Call forth interrupt routine
+	LD HL, (tick_int)
+	LD E, (HL)
+	INC HL
+	LD D, (HL)
+	INC HL
+	EX DE, HL
+	CALL forth_asm_call
 
 	; Restore context, return from interrupt
 	LD SP, (.interrupt__save_sp)

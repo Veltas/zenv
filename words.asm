@@ -55,7 +55,7 @@ attr_size:
 
 	DW forth_create_code
 tick_int:
-	DW int
+	DW int-2
 
 
 	; Default interrupt handler
@@ -580,7 +580,7 @@ forth_to_r:
 	DEC IX
 	DEC IX
 	LD (IX+0), C
-	LD (IX+1), D
+	LD (IX+1), B
 	JP forth_next
 
 
