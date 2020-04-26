@@ -21,10 +21,10 @@ keyq_len_val: EQU 8
 symbols: EQU attr_file_val + attr_size_val
 symbols_size: EQU symbols + 3*1024
 	; Address data stack starts at
-param_stack_top: EQU 0x90F0
+param_stack_top: EQU 0xFDF0
 param_stack_size: EQU 0xE0
 	; Address return stack starts at
-return_stack_top: EQU 0x91F0
+return_stack_top: EQU 0xFEF0
 return_stack_size: EQU 0xE0
 
 ;throw_addr: EQU 11
