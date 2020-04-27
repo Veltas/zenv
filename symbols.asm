@@ -244,3 +244,11 @@ this_header DEFL $
 	HEADER less_than_or_equal, "<="
 
 	HEADER greater_than_or_equal, ">="
+
+	HEADER two_to_r, "2>R"
+
+	HEADER kscan, "KSCAN"
+
+	HEADER kstate, "KSTATE"
+
+	HEADER klast, "KLAST"

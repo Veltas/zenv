@@ -68,11 +68,13 @@ int:
 	DW 1
 	DX frames-2
 	DX forth_d_plus_store-2
+	; \ KSCAN \ TODO
+;	DX kscan-2
 	; ;
 	DB forth_exit_tok
 
 
-	; : MAIN  PAGE
+	; : MAIN
 	DW forth_colon_code
 forth_main:
 	; PAGE \ Clear screen
@@ -97,8 +99,16 @@ forth_main:
 	DM "Hello, world!\n\n"
 .main__s2_end:
 	DX forth_type-2
-	; (hang) ;  \ do not return, TODO: replace with forth loop
-	DX forth_hang-2
+	; BEGIN EKEY DROP '.' EMIT 0 UNTIL \ Endlessly get input and print periods
+.begin:
+	DX ekey-2
+	DB forth_drop_tok
+	DB forth_c_literal_tok
+	DB '.'
+	DX forth_emit-2
+	DB forth_zero_literal_tok
+	DB until_raw_tok
+	DB $-1-.begin
 	DB forth_exit_tok ; will never be reached
 
 
@@ -1236,8 +1246,9 @@ forth_ms:
 	JR .ms__ms_loop
 
 
+	; \ P@ ( addr -- cx ) \ Read byte from port
 	DW $ + 2
-forth_p_fetch:
+p_fetch:
 	IF FORTH_CHECKED
 		CALL forth_dat_holds_1
 	ENDIF
@@ -1248,8 +1259,9 @@ forth_p_fetch:
 	JP forth_next
 
 
+	; \ P! ( cx addr -- ) \ Write byte to port
 	DW $ + 2
-forth_p_store:
+p_store:
 	IF FORTH_CHECKED
 		CALL forth_dat_holds_2
 	ENDIF
@@ -1460,19 +1472,30 @@ forth_invert:
 	; EKEY ( -- x ) \ Push keyboard event when ready
 	DW forth_colon_code
 ekey:
-	; BEGIN EKEY? UNTIL \ Wait for event
+	; BEGIN EKEY? HALT UNTIL \ Block for event
 .begin:
 	DX ekey_question-2
+	DX halt_-2
 	DB until_raw_tok
 	DB $-1-.begin
-	; KEYQ-S >R R@ C@ CELLS  KEYQ  +  @
+	; KEYQ KEYQ-S C@ CELLS + @ \ Receive event
+	DX keyq-2
 	DX keyq_s-2
 	DB forth_c_fetch_tok
 	DB forth_two_star_tok
-	DX keyq-2
 	DB forth_plus_tok
 	DB forth_fetch_tok
-	; R@ C@ 1+ $7 AND R> C! ;
+	; KEYQ-S C@ 1+ 7 AND KEYQ-S C! \ Increment KEYQ-S (mod 8)
+	DX keyq_s-2
+	DB forth_c_fetch_tok
+	DB forth_one_plus_tok
+	DB forth_c_literal_tok
+	DB 7
+	DB forth_and_tok
+	DX keyq_s-2
+	DB forth_c_store_tok
+	; ;
+	DB forth_exit_tok
 
 
 	DW $ + 2
@@ -1530,3 +1553,109 @@ greater_than_or_equal:
 	DB forth_less_than_tok
 	DB forth_invert_tok
 	DB forth_exit_tok
+
+
+	; : 2>R
+	DW forth_colon_code
+two_to_r:
+	; SWAP >R >R ;
+	DW forth_swap_tok
+	DW forth_to_r_tok
+	DW forth_to_r_tok
+	DW forth_exit_tok
+
+
+	; : KSCAN
+	DW forth_colon_code
+kscan:
+	; $100 \ first bit to clear
+	DB forth_one_literal_tok
+	; 8 0 DO \ scan keyboard half-rows
+.do:
+	DB forth_c_literal_tok
+	DB 8
+	DB forth_zero_literal_tok
+	DB two_to_r_tok
+	;         DUP INVERT 1 XOR P@ INVERT $1F AND \ Read half-row state
+	DB forth_dup_tok
+	DB forth_invert_tok
+	DB forth_one_literal_tok
+	DX p_fetch-2
+	DB forth_invert_tok
+	DB forth_c_literal_tok
+	DB 0x1F
+	DB forth_and_tok
+
+	;         
+
+	;         2* \ next bit
+	; LOOP
+	DB forth_loop_raw_tok
+	DB $-1-.do
+	; DROP
+	DB forth_drop_tok
+	; ;
+	DB forth_exit_tok
+
+
+	; Stores scanned key bits from the last scan
+	; CREATE KSTATE 8 ALLOT
+	DW forth_create_code
+kstate:
+	DS 8
+
+	; Stores last key press
+	DW forth_create_code
+klast:
+	DB 0
+
+repeat_wait_init: EQU 45  ; 0.9s
+repeat_repeat_init: EQU 5 ; 0.1s
+	; Used to time waiting for repeats and repeating, cleared on every new
+	; key event.
+repeat_timer:
+	DB 0
+
+unshifted_key_map:
+	; Port 0xFEFE
+	DB 0x80, 'z', 'x', 'c', 'v'
+	; Port 0xFDFE
+	DB 'a', 's', 'd', 'f', 'g'
+	; Port 0xFBFE
+	DB 'q', 'w', 'e', 'r', 't'
+	; Port 0xF7FE
+	DB '1', '2', '3', '4', '5'
+	; Port 0xEFFE
+	DB '0', '9', '8', '7', '6'
+	; Port 0xDFFE
+	DB 'p', 'o', 'i', 'u', 'y'
+	; Port 0xBFFE
+	DB '\n', 'l', 'k', 'j', 'h'
+	; Port 0x7FFE
+	DB ' ', 0x90, 'm', 'n', 'b'
+
+key_up:        EQU 0x11 ; ASCII DC1
+key_left:      EQU 0x12 ; ASCII DC2
+key_down:      EQU 0x13 ; ASCII DC3
+key_right:     EQU 0x14 ; ASCII DC4
+key_caps_lock: EQU 0x1C ; ASCII File separator
+
+caps_key_map:
+	DB 0x80, 'Z', 'X', 'C', 'V'
+	DB 'A', 'S', 'D', 'F', 'G'
+	DB 'Q', 'W', 'E', 'R', 'T'
+	DB '1', key_caps_lock, '3', '4', key_left
+	DB '\b', '9', key_right, key_up, key_down
+	DB 'P', 'O', 'I', 'U', 'Y'
+	DB '\n', 'L', 'K', 'J', 'H'
+	DB ' ', 0x90, 'M', 'N', 'B'
+
+symb_key_map:
+	DB 0x80, 'z', 'x', 'c', 'v'
+	DB 'a', 's', 'd', 'f', 'g'
+	DB 'q', 'w', 'e', 'r', 't'
+	DB '1', '2', '3', '4', '5'
+	DB '0', '9', '8', '7', '6'
+	DB 'p', 'o', 'i', 'u', 'y'
+	DB '\n', 'l', 'k', 'j', 'h'
+	DB ' ', 0x90, 'm', 'n', 'b'

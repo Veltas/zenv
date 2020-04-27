@@ -108,72 +108,6 @@ interrupt:
 .interrupt__save_sp:
 	DW 0
 
-unshifted_key_map:
-	; Port 0xFEFE
-	DB 0x80, 'z', 'x', 'c', 'v'
-	; Port 0xFDFE
-	DB 'a', 's', 'd', 'f', 'g'
-	; Port 0xFBFE
-	DB 'q', 'w', 'e', 'r', 't'
-	; Port 0xF7FE
-	DB '1', '2', '3', '4', '5'
-	; Port 0xEFFE
-	DB '0', '9', '8', '7', '6'
-	; Port 0xDFFE
-	DB 'p', 'o', 'i', 'u', 'y'
-	; Port 0xBFFE
-	DB '\n', 'l', 'k', 'j', 'h'
-	; Port 0x7FFE
-	DB ' ', 0x90, 'm', 'n', 'b'
-
-key_up:        EQU 0x11 ; ASCII DC1
-key_left:      EQU 0x12 ; ASCII DC2
-key_down:      EQU 0x13 ; ASCII DC3
-key_right:     EQU 0x14 ; ASCII DC4
-key_caps_lock: EQU 0x1C ; ASCII File separator
-
-caps_key_map:
-	DB 0x80, 'Z', 'X', 'C', 'V'
-	DB 'A', 'S', 'D', 'F', 'G'
-	DB 'Q', 'W', 'E', 'R', 'T'
-	DB '1', key_caps_lock, '3', '4', key_left
-	DB '\b', '9', key_right, key_up, key_down
-	DB 'P', 'O', 'I', 'U', 'Y'
-	DB '\n', 'L', 'K', 'J', 'H'
-	DB ' ', 0x90, 'M', 'N', 'B'
-
-symb_key_map:
-	DB 0x80, 'z', 'x', 'c', 'v'
-	DB 'a', 's', 'd', 'f', 'g'
-	DB 'q', 'w', 'e', 'r', 't'
-	DB '1', '2', '3', '4', '5'
-	DB '0', '9', '8', '7', '6'
-	DB 'p', 'o', 'i', 'u', 'y'
-	DB '\n', 'l', 'k', 'j', 'h'
-	DB ' ', 0x90, 'm', 'n', 'b'
-
-	; Stores scanned key bits from the last scan
-scan_state:
-	DS 8
-
-	; Auto-repeat control
-	; Bit 0: enable auto-repeat
-	; Bit 1: auto-repeat repeating
-	; Bit 2: last event was press
-auto_repeat:
-	DB 0x01
-
-	; Stores last key press
-last_key:
-	DB 0
-
-repeat_wait_init: EQU 45  ; 0.9s
-repeat_repeat_init: EQU 5 ; 0.1s
-	; Used to time waiting for repeats and repeating, cleared on every new
-	; key event.
-repeat_timer:
-	DB 0
-
 
 forth_next:
 	LD A, (IY+0)
@@ -247,35 +181,6 @@ forth_two_constant_does:
 	JP forth_do_does
 	DX forth_two_fetch-2
 	DB forth_exit_tok
-
-
-;forth_constant_code:
-	IF FORTH_CHECKED
-		CALL forth_dat_room_1
-	ENDIF
-	EX DE, HL
-	LD E, (HL)
-	INC HL
-	LD D, (HL)
-	PUSH DE
-	JR forth_next
-
-
-forth_2constant_code:
-	IF FORTH_CHECKED
-		CALL forth_dat_room_2
-	ENDIF
-	EX DE, HL
-	LD E, (HL)
-	INC HL
-	LD D, (HL)
-	PUSH DE
-	INC HL
-	LD E, (HL)
-	INC HL
-	LD D, (HL)
-	PUSH DE
-	JR forth_next
 
 
 forth_create_code:
@@ -356,83 +261,7 @@ forth_hang:
 	JR $
 
 tokens:
-forth_literal_raw_tok: EQU ($-tokens)/2
-	DW forth_literal_raw-2
-forth_c_literal_tok: EQU ($-tokens)/2
-	DW forth_c_literal-2
-forth_zero_literal_tok: EQU ($-tokens)/2
-	DW forth_zero_literal-2
-forth_one_literal_tok: EQU ($-tokens)/2
-	DW forth_one_literal-2
-forth_dup_tok: EQU ($-tokens)/2
-	DW forth_dup-2
-forth_swap_tok: EQU ($-tokens)/2
-	DW forth_swap-2
-forth_rot_tok: EQU ($-tokens)/2
-	DW forth_rot-2
-forth_fetch_tok: EQU ($-tokens)/2
-	DW forth_fetch-2
-forth_store_tok: EQU ($-tokens)/2
-	DW forth_store-2
-forth_c_fetch_tok: EQU ($-tokens)/2
-	DW forth_c_fetch-2
-forth_c_store_tok: EQU ($-tokens)/2
-	DW forth_c_store-2
-forth_s_quote_raw_tok: EQU ($-tokens)/2
-	DW forth_s_quote_raw-2
-forth_dot_quote_raw_tok: EQU ($-tokens)/2
-	DW 0 ; DW forth_dot_quote_raw-2
-forth_exit_tok: EQU ($-tokens)/2
-	DW forth_exit-2
-forth_loop_raw_tok: EQU ($-tokens)/2
-	DW forth_loop_raw-2
-forth_one_plus_tok: EQU ($-tokens)/2
-	DW forth_one_plus-2
-forth_question_do_raw_tok: EQU ($-tokens)/2
-	DW forth_question_do_raw-2
-forth_plus_tok: EQU ($-tokens)/2
-	DW forth_plus-2
-forth_minus_tok: EQU ($-tokens)/2
-	DW forth_minus-2
-forth_two_slash_tok: EQU ($-tokens)/2
-	DW forth_two_slash-2
-forth_if_raw_tok: EQU ($-tokens)/2
-	DW forth_if_raw-2
-forth_else_skip_tok: EQU ($-tokens)/2
-	DW forth_else_skip-2
-forth_two_dup_tok: EQU ($-tokens)/2
-	DW forth_two_dup-2
-forth_nip_tok: EQU ($-tokens)/2
-	DW forth_nip-2
-forth_less_than_tok: EQU ($-tokens)/2
-	DW forth_less_than-2
-forth_greater_than_tok: EQU ($-tokens)/2
-	DW forth_greater_than-2
-forth_minus_rot_tok: EQU ($-tokens)/2
-	DW forth_minus_rot-2
-forth_drop_tok: EQU ($-tokens)/2
-	DW forth_drop-2
-forth_c_plus_store_tok: EQU ($-tokens)/2
-	DW forth_c_plus_store-2
-forth_r_from_tok: EQU ($-tokens)/2
-	DW forth_r_from-2
-forth_to_r_tok: EQU ($-tokens)/2
-	DW forth_to_r-2
-forth_zero_equals_tok: EQU ($-tokens)/2
-	DW forth_zero_equals-2
-forth_zero_not_equals_tok: EQU ($-tokens)/2
-	DW forth_zero_not_equals-2
-forth_equals_tok: EQU ($-tokens)/2
-	DW forth_equals-2
-forth_not_equals_tok: EQU ($-tokens)/2
-	DW forth_not_equals-2
-forth_invert_tok: EQU ($-tokens)/2
-	DW forth_invert-2
-forth_two_star_tok: EQU ($-tokens)/2
-	DW forth_two_star-2
-until_raw_tok: EQU ($-tokens)/2
-	DW until_raw-2
-
+	INCLUDE "tokens.asm"
 	DS tokens+128*2 - $
 
 
