@@ -2,9 +2,8 @@
 
 ; ZENV - bootstrapping a Forth system
 
-DX: MACRO addr
-	DB (addr) >> 8
-	DB (addr) & 0xFF
+	MACRO DX addr
+	DB (addr) >> 8, (addr) & 0xFF
 	ENDM
 
 ; Globals
