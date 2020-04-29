@@ -6,16 +6,14 @@
 	DB (addr) >> 8, (addr) & 0xFF
 	ENDM
 
-; Globals
 
 FORTH_CHECKED: EQU 1
+load_addr: EQU 0x8000
 display_file_val: EQU 0x4000
 display_size_val: EQU 0x1800
 attr_file_val: EQU 0x5800
 attr_size_val: EQU 0x300
 ula_val: EQU 0xFE
-in_buf_val: EQU 0x5B00
-in_size_val: EQU 255
 keyq_len_val: EQU 8
 symbols: EQU attr_file_val + attr_size_val
 symbols_size: EQU symbols + 3*1024
@@ -26,18 +24,36 @@ param_stack_size: EQU 0xE0
 return_stack_top: EQU 0xFEF0
 return_stack_size: EQU 0xE0
 
-;throw_addr: EQU 11
-;throw_stack: EQU 13
-;throw_ret_stack: EQU 15
 
-	ORG 0x8000
+this_header = 0
+symb_pos = symbols
+
+	MACRO HEADER symbol, text
+main_pos = $
+	ORG symb_pos
+prev_header = this_header
+this_header = $
+	DW prev_header
+	DB .se - .ss
+.ss:
+	DM text
+.se:
+	DW symbol - 2
+symb_pos = $
+	ORG main_pos
+	ENDM
+
+
+	DEVICE ZXSPECTRUM48
+
+	ORG load_addr
 
 	DI
 
 	; Move symbols
 	LD DE, symbols
-	LD HL, builtin_symbols_start
-	LD BC, builtin_symbols_end - builtin_symbols_start
+	LD HL, forth_h_init
+	LD BC, symbols_len
 	LDIR
 
 	; Init interrupt handler
@@ -266,14 +282,11 @@ tokens:
 
 	INCLUDE "font.asm"
 
-
 dictionary_start:
 	INCLUDE "words.asm"
 forth_h_init:
 
+symbols_len: EQU symb_pos - symbols
 
-builtin_symbols_start:
-	DISP symbols
-	INCLUDE "symbols.asm"
-	ENT
-builtin_symbols_end:
+	SAVEBIN "zenv-code.bin", load_addr, forth_h_init-load_addr
+	SAVEBIN "zenv-syms.bin", symbols, symbols_len

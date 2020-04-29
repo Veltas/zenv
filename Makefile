@@ -7,7 +7,8 @@ clean:
 
 #zenv-unpadded.bin: zenv.asm
 zenv.bin: $(wildcard *.asm)
-	sjasmplus --nologo zenv.asm --raw=$@ --lst=zenv.lst
+	sjasmplus --nologo zenv.asm --lst=zenv.lst
+	cat zenv-code.bin zenv-syms.bin > $@
 
 zenv.tap: zenv.bin
 	bin2tap -b -o $@ $<
