@@ -10,7 +10,7 @@ syntax case ignore
 syn match z80Keywords "\<af'"
 syn match z80Keywords "\$"
 syn match z80Keywords "\$[[:digit:]]"
-syn keyword z80Keywords disp ent bss if elseif else end assert global local endlocal macro endm endif include org equ dw defw db defb ds dm defm ld push pop ex exx ldi ldir ldd lddr cpi cpir cpd cpdr add adc sub sbc and or xor cp inc dec daa cpl neg ccf scf nop halt di ei im rlca rla rrca rra rlc rl rrc rr sla sra srl rld rrd bit set res jp jr djnz call ret reti retn rst in ini inir ind indr out outi otir outd otdr nz z nc po pe p m a b c d e f af bc de ix iy i r hl h l sp ixh ixl iyh iyl
+syn keyword z80Keywords savebin device define disp ent bss if elseif else end assert global local endlocal macro endm endif include org equ dw defw db defb ds dm defm ld push pop ex exx ldi ldir ldd lddr cpi cpir cpd cpdr add adc sub sbc and or xor cp inc dec daa cpl neg ccf scf nop halt di ei im rlca rla rrca rra rlc rl rrc rr sla sra srl rld rrd bit set res jp jr djnz call ret reti retn rst in ini inir ind indr out outi otir outd otdr nz z nc po pe p m a b c d e f af bc de ix iy i r hl h l sp ixh ixl iyh iyl
 
 "syn match z80Identifiers '\<[_[:alpha:]][_[:alnum:]]*\>'
 
