@@ -1095,16 +1095,6 @@ forth_s_zero:
 
 
 	DW forth_constant_code
-in_buf:
-	DW in_buf_val
-
-
-	DW forth_constant_code
-in_size:
-	DW in_size_val
-
-
-	DW forth_constant_code
 forth_to_in:
 	; TODO
 

@@ -167,10 +167,6 @@ this_header DEFL $
 
 	HEADER forth_s_zero, "S0"
 
-	HEADER in_buf, "IN-BUF"
-
-	HEADER in_size, "IN-SIZE"
-
 	HEADER forth_to_in, ">IN"
 
 	HEADER forth_minus_tick, "-'"
