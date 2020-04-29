@@ -3,3 +3,5 @@
 *.tap
 *.swp
 *.xcf
+todo.txt
+zenv.vim

@@ -1565,37 +1565,25 @@ two_to_r:
 	DW forth_exit_tok
 
 
-	; : KSCAN
+	; : KSCAN ( -- ) \ Update keyboard state
 	DW forth_colon_code
 kscan:
-	; $100 \ first bit to clear
-	DB forth_one_literal_tok
-	; 8 0 DO \ scan keyboard half-rows
-.do:
+	; 8 0 DO I KSCAN-ROW LOOP ;
 	DB forth_c_literal_tok
 	DB 8
 	DB forth_zero_literal_tok
 	DB two_to_r_tok
-	;         DUP INVERT 1 XOR P@ INVERT $1F AND \ Read half-row state
-	DB forth_dup_tok
-	DB forth_invert_tok
-	DB forth_one_literal_tok
-	DX p_fetch-2
-	DB forth_invert_tok
-	DB forth_c_literal_tok
-	DB 0x1F
-	DB forth_and_tok
-
-	;         
-
-	;         2* \ next bit
-	; LOOP
+.do:
+	DB forth_r_from_tok
+	DX kscan_row-2
 	DB forth_loop_raw_tok
 	DB $-1-.do
-	; DROP
-	DB forth_drop_tok
-	; ;
 	DB forth_exit_tok
+
+
+	; : KSCAN-ROW ( n -- ) \ Scan+update a given row
+	DW forth_colon_code
+kscan_row:
 
 
 	; Stores scanned key bits from the last scan

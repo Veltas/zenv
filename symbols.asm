@@ -249,6 +249,8 @@ this_header DEFL $
 
 	HEADER kscan, "KSCAN"
 
+	HEADER kscan_row, "KSCAN-ROW"
+
 	HEADER kstate, "KSTATE"
 
 	HEADER klast, "KLAST"
