@@ -1666,16 +1666,34 @@ greater_than_or_equal:
 	DW forth_colon_code
 two_to_r:
 	; SWAP >R >R ;
-	DW forth_swap_tok
-	DW forth_to_r_tok
-	DW forth_to_r_tok
-	DW forth_exit_tok
+	DB forth_swap_tok
+	DB forth_to_r_tok
+	DB forth_to_r_tok
+	DB forth_exit_tok
 
 
 	; : KSCAN ( -- ) \ Update keyboard state
 	HEADER kscan, "KSCAN"
 	DW forth_colon_code
 kscan:
+	; \ Get state of shift keys for high byte of event
+	; $FEFE P@ 1 AND  $7FFE P@ 2 AND  OR  8 LSHIFT
+	DB forth_literal_raw_tok
+	DW 0xFEFE
+	DX p_fetch-2
+	DB forth_one_literal_tok
+	DB forth_and_tok
+	DB forth_literal_raw_tok
+	DW 0x7FFE
+	DX p_fetch-2
+	DB forth_c_literal_tok
+	DB 2
+	DB forth_and_tok
+	DB forth_or_tok
+	DB forth_c_literal_tok
+	DB 8
+	DB lshift_tok
+	; \ Perform per-row function
 	; 8 0 DO I KSCAN-ROW LOOP ;
 	DB forth_c_literal_tok
 	DB 8
@@ -1689,25 +1707,53 @@ kscan:
 	DB forth_exit_tok
 
 
-	; : KSCAN-ROW ( n -- ) \ Scan+update a given row
+	; : KSCAN-ROW ( n -- ) \ Scan+update a given half-row
 	HEADER kscan_row, "KSCAN-ROW"
 	DW forth_colon_code
 kscan_row:
 
 
-	; Stores scanned key bits from the last scan
+	; \ Stores scanned key bits from the last scan
 	; CREATE KSTATE 8 ALLOT
 	HEADER kstate, "KSTATE"
 	DW forth_create_code
 kstate:
 	DS 8
 
-	; Stores last key press
-	; VARIABLE klast   0 klast !
+
+	; \ Stores last key press
+	; VARIABLE KLAST   0 KLAST !
 	HEADER klast, "KLAST"
 	DW forth_create_code
 klast:
 	DB 0
+
+
+	; CODE LSHIFT ( x u -- x<<u )
+	HEADER lshift, "LSHIFT"
+	DW $ + 2
+lshift:
+	IF FORTH_CHECKED
+		CALL forth_dat_holds_2
+	ENDIF
+	POP DE
+	POP HL
+	XOR A
+	OR E
+	JR Z, .finish
+	CP 16
+	JR NC, .zero
+	LD B, E
+.loop:
+	ADD HL, HL
+	DJNZ .loop
+.finish:
+	PUSH HL
+	JP forth_next
+.zero:
+	LD HL, 0
+	JR .finish
+
 
 repeat_wait_init: EQU 45  ; 0.9s
 repeat_repeat_init: EQU 5 ; 0.1s

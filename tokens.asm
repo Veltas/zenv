@@ -84,3 +84,5 @@ forth_or_tok: EQU ($-tokens)/2
 	DW forth_or-2
 forth_xor_tok: EQU ($-tokens)/2
 	DW forth_xor-2
+lshift_tok: EQU ($-tokens)/2
+	DW lshift-2
