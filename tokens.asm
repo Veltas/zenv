@@ -10,10 +10,14 @@ forth_one_literal_tok: EQU ($-tokens)/2
 	DW forth_one_literal-2
 forth_dup_tok: EQU ($-tokens)/2
 	DW forth_dup-2
+question_dup_tok: EQU ($-tokens)/2
+	DW forth_question_dup-2
 forth_swap_tok: EQU ($-tokens)/2
 	DW forth_swap-2
 forth_rot_tok: EQU ($-tokens)/2
 	DW forth_rot-2
+over_tok: EQU ($-tokens)/2
+	DW forth_over-2
 forth_fetch_tok: EQU ($-tokens)/2
 	DW forth_fetch-2
 forth_store_tok: EQU ($-tokens)/2
@@ -86,3 +90,7 @@ forth_xor_tok: EQU ($-tokens)/2
 	DW forth_xor-2
 lshift_tok: EQU ($-tokens)/2
 	DW lshift-2
+two_drop_tok: EQU ($-tokens)/2
+	DW forth_two_drop-2
+repeat_raw_tok: EQU ($-tokens)/2
+	DW repeat_raw-2

@@ -105,7 +105,7 @@ forth_main:
 .main__s1_end:
 	DX forth_type-2
 	DB forth_loop_raw_tok
-	DB $-1-.main__loop
+	DB .main__loop-$+256
 .main__loop_skip:
 	DB forth_s_quote_raw_tok
 	DB .main__s2_end-$-1
@@ -1001,11 +1001,8 @@ forth_loop_raw:
 .forth_loop_raw__loop:
 	LD (IX+0), E
 	LD (IX+1), D
-	LD A, (IY+0)
-	NEG
-	LD E, A
+	LD E, (IY+0)
 	LD D, 0xFF
-	DEC DE
 	ADD IY, DE
 	JP forth_next
 
@@ -1023,7 +1020,7 @@ forth_type:
 	DX forth_emit-2
 	DB forth_one_plus_tok
 	DB forth_loop_raw_tok
-	DB $-1-.forth_type__loop
+	DB .forth_type__loop-$+256
 .forth_type__skip:
 	DB forth_drop_tok
 	DB forth_exit_tok
@@ -1099,16 +1096,17 @@ forth_fill:
 	POP HL
 	LD A, B
 	OR C
-	JP Z, forth_next
+	JR Z, .exit
 	LD (HL), E
 	DEC BC
 	LD A, B
 	OR C
-	JP Z, forth_next
+	JP Z, .exit
 	LD E, L
 	LD D, H
 	INC DE
 	LDIR
+.exit:
 	JP forth_next
 
 
@@ -1250,6 +1248,15 @@ forth_else_skip:
 	INC IY
 	LD E, (IY-1)
 	LD D, 0
+	ADD IY, DE
+	JP forth_next
+
+
+	HEADER repeat_raw, "(REPEAT)"
+	DW $ + 2
+repeat_raw:
+	LD E, (IY+0)
+	LD D, 0xFF
 	ADD IY, DE
 	JP forth_next
 
@@ -1661,23 +1668,37 @@ greater_than_or_equal:
 	DB forth_exit_tok
 
 
-	; : 2>R
+	; CODE 2>R
 	HEADER two_to_r, "2>R"
-	DW forth_colon_code
+	DW $ + 2
 two_to_r:
-	; SWAP >R >R ;
-	DB forth_swap_tok
-	DB forth_to_r_tok
-	DB forth_to_r_tok
-	DB forth_exit_tok
+	IF FORTH_CHECKED
+		CALL forth_dat_holds_2_ret_room_2
+	ENDIF
+	POP HL
+	POP DE
+	LD BC, -4
+	ADD IX, BC
+	LD (IX+0), L
+	LD (IX+1), H
+	LD (IX+2), E
+	LD (IX+3), D
+	JP forth_next
 
 
-	; : KSCAN ( -- ) \ Update keyboard state
+	; VARIABLE KSHIFT-STATE
+	HEADER kshift_state, "KSHIFT-STATE"
+	DW forth_create_code
+kshift_state:
+	DW 0
+
+
+	; : KSCAN \ Update keyboard state
 	HEADER kscan, "KSCAN"
 	DW forth_colon_code
 kscan:
 	; \ Get state of shift keys for high byte of event
-	; $FEFE P@ 1 AND  $7FFE P@ 2 AND  OR  8 LSHIFT
+	; $FEFE P@ 1 AND  $7FFE P@ 2 AND  OR  8 LSHIFT  KSHIFT-STATE !
 	DB forth_literal_raw_tok
 	DW 0xFEFE
 	DX p_fetch-2
@@ -1693,7 +1714,8 @@ kscan:
 	DB forth_c_literal_tok
 	DB 8
 	DB lshift_tok
-	; \ Perform per-row function
+	DX kshift_state
+	; \ Call per-row word
 	; 8 0 DO I KSCAN-ROW LOOP ;
 	DB forth_c_literal_tok
 	DB 8
@@ -1703,18 +1725,54 @@ kscan:
 	DB forth_r_from_tok
 	DX kscan_row-2
 	DB forth_loop_raw_tok
-	DB $-1-.do
+	DB .do-$+256
 	DB forth_exit_tok
 
 
-	; : KSCAN-ROW ( n -- ) \ Scan+update a given half-row
+	; ( n ) : KSCAN-ROW \ Scan+update a given half-row
 	HEADER kscan_row, "KSCAN-ROW"
 	DW forth_colon_code
 kscan_row:
+	; \ Read row state
+	; ( n ) 1  OVER LSHIFT  INVERT  8 LSHIFT ULA OR  P@  $1F AND
+	DB forth_one_literal_tok
+	DB over_tok
+	DB lshift_tok
+	DB forth_invert_tok
+	DB forth_c_literal_tok
+	DB 8
+	DB lshift_tok
+	DX ula-2
+	DB forth_or_tok
+	DX p_fetch-2
+	DB forth_c_literal_tok
+	DB 0x1F
+	DB forth_and_tok
+	; \ Calculate state address
+	; ( n state ) OVER CHARS KSTATE +
+	DB over_tok
+	DX kstate-2
+	DB forth_plus_tok
+	; \ Update when state changes
+	; ( n state addr ) 2DUP C@ XOR
+	DB forth_two_dup_tok
+	DB forth_c_fetch_tok
+	DB forth_xor_tok
+	; ( n state addr xor'd )  BEGIN ?DUP WHILE
+.begin:
+	DB question_dup_tok
+	DB forth_if_raw_tok
+	DB .repeat-$-1
+	;         \ Get lowest bit 
+	; REPEAT
+	DB repeat_raw_tok
+	DB .begin-$+256
+.repeat:
 
 
 	; \ Stores scanned key bits from the last scan
-	; CREATE KSTATE 8 ALLOT
+	; CREATE KSTATE  8 CHARS  ALLOT
+	; KSTATE  8 CHARS  ERASE
 	HEADER kstate, "KSTATE"
 	DW forth_create_code
 kstate:
@@ -1722,7 +1780,7 @@ kstate:
 
 
 	; \ Stores last key press
-	; VARIABLE KLAST   0 KLAST !
+	; CREATE KLAST  0 C,
 	HEADER klast, "KLAST"
 	DW forth_create_code
 klast:
