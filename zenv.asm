@@ -7,7 +7,7 @@
 	ENDM
 
 
-FORTH_CHECKED: EQU 1
+CHECKED: EQU 1
 load_addr: EQU 0x8000
 display_file_val: EQU 0x4000
 display_size_val: EQU 0x1800
@@ -28,13 +28,13 @@ return_stack_size: EQU 0xE0
 this_header = 0
 symb_pos = symbols
 
-	MACRO HEADER symbol, text
+	MACRO HEADER symbol, text, immediate
 main_pos = $
 	ORG symb_pos
 prev_header = this_header
 this_header = $
 	DW prev_header
-	DB .se - .ss
+	DB (.se - .ss) | (immediate << 7)
 .ss:
 	DM text
 .se:
@@ -52,7 +52,7 @@ symb_pos = $
 
 	; Move symbols
 	LD DE, symbols
-	LD HL, forth_h_init
+	LD HL, h_init
 	LD BC, symbols_len
 	LDIR
 
@@ -87,8 +87,8 @@ symb_pos = $
 	LD IX, return_stack_top
 
 	; Run forth
-	LD IY, forth_main
-	JP forth_next
+	LD IY, main
+	JP next
 
 
 	; Interrupt handling body
@@ -108,7 +108,7 @@ interrupt:
 	LD D, (HL)
 	INC HL
 	EX DE, HL
-	CALL forth_asm_call
+	CALL asm_call
 
 	; Restore context, return from interrupt
 	LD SP, (.interrupt__save_sp)
@@ -124,7 +124,7 @@ interrupt:
 	DW 0
 
 
-forth_next:
+next:
 	LD A, (IY+0)
 	INC IY
 	CP 0x80
@@ -156,9 +156,9 @@ forth_next:
 	JR .next__got_code_ptr
 
 
-forth_colon_code:
-	IF FORTH_CHECKED
-		CALL forth_ret_room_1
+colon_code:
+	IF CHECKED
+		CALL ret_room_1
 	ENDIF
 	PUSH DE
 	EX (SP), IY
@@ -167,51 +167,51 @@ forth_colon_code:
 	DEC IX
 	LD (IX+0), E
 	LD (IX+1), D
-	JR forth_next
+	JR next
 
 
-forth_do_does:
+do_does:
 	; Push parameter field address to stack, DE = asm snippet
 	EX DE, HL
 	PUSH HL
-	IF FORTH_CHECKED
-		CALL forth_dat_room_0
+	IF CHECKED
+		CALL dat_room_0
 	ENDIF
 	; Forward DE to colon def
 	INC DE
 	INC DE
 	INC DE
 	; Call that colon def
-	JR forth_colon_code
+	JR colon_code
 
 
-forth_constant_code:
-forth_constant_does:
-	JP forth_do_does
-	DB forth_fetch_tok
-	DB forth_exit_tok
+constant_code:
+constant_does:
+	JP do_does
+	DB fetch_tok
+	DB exit_tok
 
 
-forth_two_constant_does:
-	JP forth_do_does
-	DX forth_two_fetch-2
-	DB forth_exit_tok
+two_constant_does:
+	JP do_does
+	DX two_fetch-2
+	DB exit_tok
 
 
-forth_create_code:
-	IF FORTH_CHECKED
-		CALL forth_dat_room_1
+create_code:
+	IF CHECKED
+		CALL dat_room_1
 	ENDIF
 	PUSH DE
-	JR forth_next
+	JR next
 
 
-	; CALL this address, with HL set to asm code to call, uses forth_next
+	; CALL this address, with HL set to asm code to call, uses next
 	; to return to calling code.
-forth_asm_call:
-	IF FORTH_CHECKED
+asm_call:
+	IF CHECKED
 		PUSH HL
-		CALL forth_ret_room_2
+		CALL ret_room_2
 		POP HL
 	ENDIF
 	; Push IP to ret stack
@@ -228,16 +228,16 @@ forth_asm_call:
 	LD (IX+0), C
 	LD (IX+1), B
 	; Set IP to instruction below
-	LD IY, forth_asm_call_param
+	LD IY, asm_call_param
 	; Jump to provided HL
 	JP (HL)
-forth_asm_call_param:
-	DX forth_asm_exit_cp
-forth_asm_exit_cp:
+asm_call_param:
+	DX asm_exit_cp
+asm_exit_cp:
 	DW $ + 2
-forth_asm_exit:
-	IF FORTH_CHECKED
-		CALL forth_ret_holds_1
+asm_exit:
+	IF CHECKED
+		CALL ret_holds_1
 	ENDIF
 	LD L, (IX+0)
 	LD H, (IX+1)
@@ -252,28 +252,28 @@ forth_asm_exit:
 	JP (HL)
 
 
-forth_dat_room_0:
-forth_dat_room_1:
-forth_dat_room_2:
-forth_dat_holds_1:
-forth_dat_holds_1_room_1:
-forth_dat_holds_2_room_1:
-forth_dat_holds_1_ret_room_1:
-forth_dat_holds_2_ret_room_2:
-forth_dat_room_1_ret_holds_1:
-forth_dat_holds_2:
-forth_dat_holds_2_room_2:
-forth_dat_holds_3:
-forth_dat_holds_4:
-forth_dat_holds_4_room_2:
-forth_ret_room_1:
-forth_ret_room_2:
-forth_ret_holds_1:
-forth_ret_holds_2:
+dat_room_0:
+dat_room_1:
+dat_room_2:
+dat_holds_1:
+dat_holds_1_room_1:
+dat_holds_2_room_1:
+dat_holds_1_ret_room_1:
+dat_holds_2_ret_room_2:
+dat_room_1_ret_holds_1:
+dat_holds_2:
+dat_holds_2_room_2:
+dat_holds_3:
+dat_holds_4:
+dat_holds_4_room_2:
+ret_room_1:
+ret_room_2:
+ret_holds_1:
+ret_holds_2:
 	RET
 
 	DW $+2
-forth_hang:
+hang:
 	JR $
 
 tokens:
@@ -285,9 +285,11 @@ tokens:
 
 dictionary_start:
 	INCLUDE "words.asm"
-forth_h_init:
+h_init:
+
+sym_last_init: EQU this_header
 
 symbols_len: EQU symb_pos - symbols
 
-	SAVEBIN "zenv-code.bin", load_addr, forth_h_init-load_addr
+	SAVEBIN "zenv-code.bin", load_addr, h_init-load_addr
 	SAVEBIN "zenv-syms.bin", symbols, symbols_len

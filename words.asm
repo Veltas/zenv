@@ -1,260 +1,286 @@
 ; vim:set syntax=z80:
 
 ; Current data space pointer
-	HEADER forth_h, "H"
-	DW forth_create_code
-forth_h:
-	DW forth_h_init
+	HEADER h_, "H", 0
+	DW create_code
+h_:
+	DW h_init
+
+
+; Points to most recently defined symbol
+	HEADER sym_last, "SYM-LAST", 0
+	DW create_code
+sym_last:
+	DW sym_last_init
 
 
 ; non-zero while compiling
-	HEADER forth_state, "STATE"
-	DW forth_create_code
-forth_state:
+	HEADER state, "STATE", 0
+	DW create_code
+state:
 	DW 0
 
 
-	HEADER frames, "FRAMES"
-	DW forth_create_code
+	HEADER frames, "FRAMES", 0
+	DW create_code
 frames:
 	DW 0
 	DW 0
 
 
-	HEADER t_attr, "T-ATTR"
-	DW forth_create_code
+	HEADER t_attr, "T-ATTR", 0
+	DW create_code
 t_attr:
 	DB 7
 
 
-	HEADER t_col, "T-COL"
-	DW forth_create_code
+	HEADER t_col, "T-COL", 0
+	DW create_code
 t_col:
 	DB 0
 
 
-	HEADER t_row, "T-ROW"
-	DW forth_create_code
+	HEADER t_row, "T-ROW", 0
+	DW create_code
 t_row:
 	DB 0
 
 
-	HEADER display_file, "DISPLAY-FILE"
-	DW forth_constant_code
+	HEADER display_file, "DISPLAY-FILE", 0
+	DW constant_code
 display_file:
 	DW display_file_val
 
 
-	HEADER display_size, "DISPLAY-SIZE"
-	DW forth_constant_code
+	HEADER display_size, "DISPLAY-SIZE", 0
+	DW constant_code
 display_size:
 	DW display_size_val
 
 
-	HEADER attr_file, "ATTR-FILE"
-	DW forth_constant_code
+	HEADER attr_file, "ATTR-FILE", 0
+	DW constant_code
 attr_file:
 	DW attr_file_val
 
 
-	HEADER attr_size, "ATTR-SIZE"
-	DW forth_constant_code
+	HEADER attr_size, "ATTR-SIZE", 0
+	DW constant_code
 attr_size:
 	DW attr_size_val
 
 
-	HEADER tick_int, "'INT"
-	DW forth_create_code
+	HEADER tick_int, "'INT", 0
+	DW create_code
 tick_int:
 	DW int-2
 
 
 	; Default interrupt handler
 	; : INT
-	HEADER int, "INT"
-	DW forth_colon_code
+	HEADER int, "INT", 0
+	DW colon_code
 int:
 	; 1. FRAMES D+! \ increment FRAMES
-	DX forth_two_literal_raw-2
+	DX two_literal_raw-2
 	DW 0
 	DW 1
 	DX frames-2
-	DX forth_d_plus_store-2
+	DX d_plus_store-2
 	; \ KSCAN \ TODO
 ;	DX kscan-2
 	; ;
-	DB forth_exit_tok
+	DB exit_tok
 
 
 	; : MAIN
-	HEADER forth_main, "MAIN"
-	DW forth_colon_code
-forth_main:
+	HEADER main, "MAIN", 0
+	DW colon_code
+main:
 	; PAGE \ Clear screen
-	DX forth_page-2
-	; 50 0 ?DO S" ..." TYPE LOOP S" ..." TYPE   \ test program
-	DB forth_c_literal_tok
-	DB 50
-	DB forth_zero_literal_tok
-	DB forth_question_do_raw_tok
-	DB .main__loop_skip-$-1
-.main__loop:
-	DB forth_s_quote_raw_tok
-	DB .main__s1_end-$-1
+	DX page-2
+	; 128 20 DO I EMIT LOOP CR CR ;
+	DB c_literal_tok
+	DB 128
+	DB c_literal_tok
+	DB 20
+	DB two_to_r_tok
+.do1:
+	DB r_fetch_tok
+	DX emit-2
+	DB loop_raw_tok
+	DB .do1-$+256
+	DX cr-2
+	DX cr-2
+	; 5 0 DO S" ..." TYPE LOOP  CR CR S" ..." TYPE   \ test program
+	DB c_literal_tok
+	DB 5
+	DB zero_literal_tok
+	DB two_to_r_tok
+.do2:
+	DB s_quote_raw_tok
+	DB .s1_end-$-1
 	DM ": FILL ROT ROT 0 ?DO 2DUP C! 1+ LOOP 2DROP ; ok "
-.main__s1_end:
-	DX forth_type-2
-	DB forth_loop_raw_tok
-	DB .main__loop-$+256
-.main__loop_skip:
-	DB forth_s_quote_raw_tok
-	DB .main__s2_end-$-1
+.s1_end:
+	DX type-2
+	DB loop_raw_tok
+	DB .do2-$+256
+.loop_skip:
+	DX cr-2
+	DX cr-2
+	DB s_quote_raw_tok
+	DB .s2_end-$-1
 	DM "Hello, world!\n\n"
-.main__s2_end:
-	DX forth_type-2
+.s2_end:
+	DX type-2
+	DB s_quote_raw_tok
+	DB .s3_end-$-1
+	DM "The quick, brown fox jumped swiftly over the lazy dog.\n\n"
+.s3_end:
+	DX type-2
 	; BEGIN EKEY DROP '.' EMIT 0 UNTIL \ Endlessly get input and print periods
 .begin:
 	DX ekey-2
-	DB forth_drop_tok
-	DB forth_c_literal_tok
+	DB drop_tok
+	DB c_literal_tok
 	DB '.'
-	DX forth_emit-2
-	DB forth_zero_literal_tok
+	DX emit-2
+	DB zero_literal_tok
 	DB until_raw_tok
 	DB $-1-.begin
-	DB forth_exit_tok ; will never be reached
+	DB exit_tok ; will never be reached
 
 
-	HEADER forth_zero_literal, "0"
+	HEADER zero_literal, "0", 0
 	DW $ + 2
-forth_zero_literal:
-	IF FORTH_CHECKED
-		CALL forth_dat_room_1
+zero_literal:
+	IF CHECKED
+		CALL dat_room_1
 	ENDIF
 	LD BC, 0
 	PUSH BC
-	JP forth_next
+	JP next
 
 
-	HEADER forth_one_literal, "1"
+	HEADER one_literal, "1", 0
 	DW $ + 2
-forth_one_literal:
-	IF FORTH_CHECKED
-		CALL forth_dat_room_1
+one_literal:
+	IF CHECKED
+		CALL dat_room_1
 	ENDIF
 	LD BC, 1
 	PUSH BC
-	JP forth_next
+	JP next
 
 
-	HEADER forth_literal_raw, "(LITERAL)"
+	HEADER literal_raw, "(LITERAL)", 0
 	DW $ + 2
-forth_literal_raw:
-	IF FORTH_CHECKED
-		CALL forth_dat_room_1
+literal_raw:
+	IF CHECKED
+		CALL dat_room_1
 	ENDIF
 	LD E, (IY+0)
 	LD D, (IY+1)
 	INC IY
 	INC IY
 	PUSH DE
-	JP forth_next
+	JP next
 
 
 	; : SCROLL
-	HEADER scroll, "SCROLL"
-	DW forth_colon_code
+	HEADER scroll, "SCROLL", 0
+	DW colon_code
 scroll:
 	; T-ROW C@ 8 -  0 MAX  T-ROW C!
 	DX t_row-2
-	DB forth_c_fetch_tok
-	DB forth_c_literal_tok
+	DB c_fetch_tok
+	DB c_literal_tok
 	DB 8
-	DB forth_minus_tok
-	DB forth_zero_literal_tok
-	DX forth_max-2
+	DB minus_tok
+	DB zero_literal_tok
+	DX max-2
 	DX t_row-2
-	DB forth_c_store_tok
+	DB c_store_tok
 	; DISPLAY-FILE 2048 +  DISPLAY-FILE  4096  CMOVE
-	DB forth_literal_raw_tok
+	DB literal_raw_tok
 	DW display_file_val + 2048
 	DX display_file-2
-	DB forth_literal_raw_tok
+	DB literal_raw_tok
 	DW 4096
-	DX forth_cmove-2
+	DX cmove-2
 	; ATTR-FILE 256 +  ATTR-FILE  512  CMOVE
-	DB forth_literal_raw_tok
+	DB literal_raw_tok
 	DW attr_file_val + 256
 	DX attr_file-2
-	DB forth_literal_raw_tok
+	DB literal_raw_tok
 	DW 512
-	DX forth_cmove-2
+	DX cmove-2
 	; DISPLAY-FILE 4096 +  2048  ERASE
-	DB forth_literal_raw_tok
+	DB literal_raw_tok
 	DW display_file_val + 4096
-	DB forth_literal_raw_tok
+	DB literal_raw_tok
 	DW 2048
-	DX forth_erase-2
+	DX erase-2
 	; ATTR-FILE 512 +  256  T-ATTR C@  FILL
-	DB forth_literal_raw_tok
+	DB literal_raw_tok
 	DW attr_file_val + 512
-	DB forth_literal_raw_tok
+	DB literal_raw_tok
 	DW 256
 	DX t_attr-2
-	DB forth_c_fetch_tok
-	DX forth_fill-2
+	DB c_fetch_tok
+	DX fill-2
 	; EXIT
-	DB forth_exit_tok
+	DB exit_tok
 
 
 	; : CR
-	HEADER forth_cr, "CR"
-	DW forth_colon_code
-forth_cr:
+	HEADER cr, "CR", 0
+	DW colon_code
+cr:
 	; T-ROW C@ 22 > IF SCROLL THEN 1 T-ROW C+!
 	DX t_row-2
-	DB forth_c_fetch_tok
-	DB forth_c_literal_tok
+	DB c_fetch_tok
+	DB c_literal_tok
 	DB 22
-	DB forth_greater_than_tok
-	DB forth_if_raw_tok
+	DB greater_than_tok
+	DB if_raw_tok
 	DB .cr__if_skip-$-1
 	DX scroll-2
 .cr__if_skip:
-	DB forth_one_literal_tok
+	DB one_literal_tok
 	DX t_row-2
-	DB forth_c_plus_store_tok
+	DB c_plus_store_tok
 	; 0 T-COL C!
-	DB forth_zero_literal_tok
+	DB zero_literal_tok
 	DX t_col-2
-	DB forth_c_store_tok
+	DB c_store_tok
 	; ;
-	DB forth_exit_tok
+	DB exit_tok
 
 
-	HEADER forth_emit, "EMIT"
+	HEADER emit, "EMIT", 0
 	DW $ + 2
-forth_emit:
-	IF FORTH_CHECKED
-		CALL forth_dat_holds_1
+emit:
+	IF CHECKED
+		CALL dat_holds_1
 	ENDIF
 	; C is character
 	POP BC
 	LD A, C
 	CP 0x20
-	JR C, .forth_emit__other_char
+	JR C, .emit__other_char
 	CP 0x80
-	JR NC, .forth_emit__other_char
+	JR NC, .emit__other_char
 
 	LD A, (t_col)
 	CP 64
-	JR C, .forth_emit__no_wrap
+	JR C, .emit__no_wrap
 	PUSH BC
-	LD DE, forth_cr
-	LD HL, forth_colon_code
-	CALL forth_asm_call
+	LD DE, cr
+	LD HL, colon_code
+	CALL asm_call
 	POP BC
-.forth_emit__no_wrap:
+.emit__no_wrap:
 
 	LD A, C
 	AND 0x7E
@@ -298,9 +324,9 @@ forth_emit:
 	; Calculate post-shift glyph mask in B
 	BIT 0, B
 	LD A, 0xF
-	JR NZ, .forth_emit__odd_col
+	JR NZ, .emit__odd_col
 	CPL
-.forth_emit__odd_col:
+.emit__odd_col:
 	LD B, A
 
 	; Pop write address
@@ -308,7 +334,7 @@ forth_emit:
 	; Pop font address
 	POP DE
 
-.forth_emit__loop:
+.emit__loop:
 	; Clear glyph scanline
 	LD A, B
 	CPL
@@ -317,12 +343,12 @@ forth_emit:
 	; Load glyph scanline
 	LD A, (DE)
 	BIT 7, C
-	JR Z, .forth_emit__no_shift
+	JR Z, .emit__no_shift
 	RLCA
 	RLCA
 	RLCA
 	RLCA
-.forth_emit__no_shift:
+.emit__no_shift:
 	AND B
 	; Apply glyph to scanline
 	OR (HL)
@@ -332,169 +358,169 @@ forth_emit:
 	INC H
 	INC C
 	BIT 3, C
-	JR Z, .forth_emit__loop
+	JR Z, .emit__loop
 
 	LD HL, t_col
 	INC (HL)
-	JP forth_next
+	JP next
 
 
-.forth_emit__other_char:
+.emit__other_char:
 	CP 10
 
 	; Run CR if 10
-	LD DE, forth_cr
-	LD HL, forth_colon_code
-	CALL Z, forth_asm_call
+	LD DE, cr
+	LD HL, colon_code
+	CALL Z, asm_call
 
-	JP forth_next
+	JP next
 
 
-	HEADER forth_bye, "BYE"
+	HEADER bye, "BYE", 0
 	DW $ + 2
-forth_bye:
+bye:
 	RST 0x00
 
 
-	HEADER forth_store, "!"
+	HEADER store, "!", 0
 	DW $ + 2
-forth_store:
-	IF FORTH_CHECKED
-		CALL forth_dat_holds_2
+store:
+	IF CHECKED
+		CALL dat_holds_2
 	ENDIF
 	POP HL
 	POP BC
 	LD (HL), C
 	INC HL
 	LD (HL), B
-	JP forth_next
+	JP next
 
 
 	; : PAGE
-	HEADER forth_page, "PAGE"
-	DW forth_colon_code
-forth_page:
+	HEADER page, "PAGE", 0
+	DW colon_code
+page:
 	; 0 T-COL C!
-	DB forth_zero_literal_tok
+	DB zero_literal_tok
 	DX t_col-2
-	DB forth_c_store_tok
+	DB c_store_tok
 	; 0 T-ROW C!
-	DB forth_zero_literal_tok
+	DB zero_literal_tok
 	DX t_row-2
-	DB forth_c_store_tok
+	DB c_store_tok
 	; DISPLAY-FILE DISPLAY-SIZE ERASE
 	DX display_file-2
 	DX display_size-2
-	DX forth_erase-2
+	DX erase-2
 	; ATTR-FILE ATTR-SIZE T-ATTR C@ FILL
 	DX attr_file-2
 	DX attr_size-2
 	DX t_attr-2
-	DB forth_c_fetch_tok
-	DX forth_fill-2
+	DB c_fetch_tok
+	DX fill-2
 	; ;
-	DB forth_exit_tok
+	DB exit_tok
 
 
-	HEADER forth_plus, "+"
+	HEADER plus, "+", 0
 	DW $ + 2
-forth_plus:
-	IF FORTH_CHECKED
-		CALL forth_dat_holds_2
+plus:
+	IF CHECKED
+		CALL dat_holds_2
 	ENDIF
 	POP HL
 	POP BC
 	ADD HL, BC
 	PUSH HL
-	JP forth_next
+	JP next
 
 
-	HEADER forth_minus, "-"
+	HEADER minus, "-", 0
 	DW $ + 2
-forth_minus:
-	IF FORTH_CHECKED
-		CALL forth_dat_holds_2
+minus:
+	IF CHECKED
+		CALL dat_holds_2
 	ENDIF
 	POP BC
 	POP HL
 	OR A
 	SBC HL, BC
 	PUSH HL
-	JP forth_next
+	JP next
 
 
-	HEADER forth_zero_equals, "0="
+	HEADER zero_equals, "0=", 0
 	DW $ + 2
-forth_zero_equals:
-	IF FORTH_CHECKED
-		CALL forth_dat_holds_1
+zero_equals:
+	IF CHECKED
+		CALL dat_holds_1
 	ENDIF
 	POP HL
 	LD A, L
 	OR H
-	JR NZ, .forth_zero_equals__not_equal
+	JR NZ, .zero_equals__not_equal
 	DEC HL
 	PUSH HL
-	JP forth_next
-.forth_zero_equals__not_equal:
+	JP next
+.zero_equals__not_equal:
 	LD HL, 0
 	PUSH HL
-	JP forth_next
+	JP next
 
 
-	HEADER forth_zero_less, "0<"
+	HEADER zero_less, "0<", 0
 	DW $ + 2
-forth_zero_less:
-	IF FORTH_CHECKED
-		CALL forth_dat_holds_1
+zero_less:
+	IF CHECKED
+		CALL dat_holds_1
 	ENDIF
 	POP AF
 	AND 0x80
-	JR Z, .forth_zero_less__non_negative
+	JR Z, .zero_less__non_negative
 	LD HL, 0xFF
 	PUSH HL
-	JP forth_next
-.forth_zero_less__non_negative:
+	JP next
+.zero_less__non_negative:
 	LD H, A
 	LD L, A
 	PUSH HL
-	JP forth_next
+	JP next
 
 
-	HEADER forth_one_plus, "1+"
+	HEADER one_plus, "1+", 0
 	DW $ + 2
-forth_one_plus:
-	IF FORTH_CHECKED
-		CALL forth_dat_holds_1
+one_plus:
+	IF CHECKED
+		CALL dat_holds_1
 	ENDIF
 	POP HL
 	INC HL
 	PUSH HL
-	JP forth_next
+	JP next
 
 
-	HEADER forth_char_plus, "CHAR+"
-	DW forth_one_plus - 2
-forth_char_plus:
+	HEADER char_plus, "CHAR+", 0
+	DW one_plus - 2
+char_plus:
 
 
-	HEADER forth_one_minus, "1-"
+	HEADER one_minus, "1-", 0
 	DW $ + 2
-forth_one_minus:
-	IF FORTH_CHECKED
-		CALL forth_dat_holds_1
+one_minus:
+	IF CHECKED
+		CALL dat_holds_1
 	ENDIF
 	POP HL
 	DEC HL
 	PUSH HL
-	JP forth_next
+	JP next
 
 
-	HEADER forth_two_store, "2!"
+	HEADER two_store, "2!", 0
 	DW $ + 2
-forth_two_store:
-	IF FORTH_CHECKED
-		CALL forth_dat_holds_3
+two_store:
+	IF CHECKED
+		CALL dat_holds_3
 	ENDIF
 	POP HL
 	POP BC
@@ -506,32 +532,32 @@ forth_two_store:
 	LD (HL), E
 	INC HL
 	LD (HL), D
-	JP forth_next
+	JP next
 
 
-	HEADER forth_two_star, "2*"
+	HEADER two_star, "2*", 0
 	DW $ + 2
-forth_two_star:
-	IF FORTH_CHECKED
-		CALL forth_dat_holds_1
+two_star:
+	IF CHECKED
+		CALL dat_holds_1
 	ENDIF
 	POP HL
 	SLA L
 	RL H
 	PUSH HL
-	JP forth_next
+	JP next
 
 
-	HEADER forth_cells, "CELLS"
-	DW forth_two_star
-forth_cells:
+	HEADER cells, "CELLS", 0
+	DW two_star
+cells:
 
 
-	HEADER forth_exit, "EXIT"
+	HEADER exit, "EXIT", 0
 	DW $ + 2
-forth_exit:
-	IF FORTH_CHECKED
-		CALL forth_ret_holds_1
+exit:
+	IF CHECKED
+		CALL ret_holds_1
 	ENDIF
 	LD L, (IX+0)
 	LD H, (IX+1)
@@ -539,27 +565,27 @@ forth_exit:
 	INC IX
 	PUSH HL
 	POP IY
-	JP forth_next
+	JP next
 
 
-	HEADER forth_two_slash, "2/"
+	HEADER two_slash, "2/", 0
 	DW $ + 2
-forth_two_slash:
-	IF FORTH_CHECKED
-		CALL forth_dat_holds_1
+two_slash:
+	IF CHECKED
+		CALL dat_holds_1
 	ENDIF
 	POP DE
 	SRA D
 	RR E
 	PUSH DE
-	JP forth_next
+	JP next
 
 
-	HEADER forth_two_fetch, "2@"
+	HEADER two_fetch, "2@", 0
 	DW $ + 2
-forth_two_fetch:
-	IF FORTH_CHECKED
-		CALL forth_dat_holds_1_room_1
+two_fetch:
+	IF CHECKED
+		CALL dat_holds_1_room_1
 	ENDIF
 	POP HL
 	LD E, (HL)
@@ -571,25 +597,25 @@ forth_two_fetch:
 	LD B, (HL)
 	PUSH BC
 	PUSH DE
-	JP forth_next
+	JP next
 
 
-	HEADER forth_two_drop, "2DROP"
+	HEADER two_drop, "2DROP", 0
 	DW $ + 2
-forth_two_drop:
-	IF FORTH_CHECKED
-		CALL forth_dat_holds_2
+two_drop:
+	IF CHECKED
+		CALL dat_holds_2
 	ENDIF
 	POP HL
 	POP HL
-	JP forth_next
+	JP next
 
 
-	HEADER forth_two_dup, "2DUP"
+	HEADER two_dup, "2DUP", 0
 	DW $ + 2
-forth_two_dup:
-	IF FORTH_CHECKED
-		CALL forth_dat_holds_2_room_2
+two_dup:
+	IF CHECKED
+		CALL dat_holds_2_room_2
 	ENDIF
 	POP DE
 	POP BC
@@ -597,14 +623,14 @@ forth_two_dup:
 	PUSH DE
 	PUSH BC
 	PUSH DE
-	JP forth_next
+	JP next
 
 
-	HEADER forth_two_over, "2OVER"
+	HEADER two_over, "2OVER", 0
 	DW $ + 2
-forth_two_over:
-	IF FORTH_CHECKED
-		CALL forth_dat_holds_4_room_2
+two_over:
+	IF CHECKED
+		CALL dat_holds_4_room_2
 	ENDIF
 	LD HL, 4
 	ADD HL, SP
@@ -617,98 +643,98 @@ forth_two_over:
 	LD D, (HL)
 	PUSH DE
 	PUSH BC
-	JP forth_next
+	JP next
 
 
-	HEADER forth_to_r, ">R"
+	HEADER to_r, ">R", 0
 	DW $ + 2
-forth_to_r:
-	IF FORTH_CHECKED
-		CALL forth_dat_holds_1_ret_room_1
+to_r:
+	IF CHECKED
+		CALL dat_holds_1_ret_room_1
 	ENDIF
 	POP BC
 	DEC IX
 	DEC IX
 	LD (IX+0), C
 	LD (IX+1), B
-	JP forth_next
+	JP next
 
 
-	HEADER forth_question_dup, "?DUP"
+	HEADER question_dup, "?DUP", 0
 	DW $ + 2
-forth_question_dup:
-	IF FORTH_CHECKED
-		CALL forth_dat_holds_1_room_1
+question_dup:
+	IF CHECKED
+		CALL dat_holds_1_room_1
 	ENDIF
 
 	POP DE
 	PUSH DE
 	LD A, E
 	OR D
-	JR Z, .forth_question_dup__end
+	JR Z, .question_dup__end
 	PUSH DE
-.forth_question_dup__end:
-	JP forth_next
+.question_dup__end:
+	JP next
 
 
-	HEADER forth_abort, "ABORT"
+	HEADER abort, "ABORT", 0
 	DW $ + 2
-forth_abort:
+abort:
 	LD SP, param_stack_top
 	LD IX, return_stack_top
-	JP forth_quit
+	JP quit
 
 
-	HEADER forth_abs, "ABS"
+	HEADER abs, "ABS", 0
 	DW $ + 2
-forth_abs:
+abs:
 	POP BC
 	LD A, B
 	AND 0x80
-	JP NZ, .forth_abs__neg
+	JP NZ, .abs__neg
 	PUSH BC
-	JP forth_next
-.forth_abs__neg:
+	JP next
+.abs__neg:
 	LD HL, 0
 	OR A
 	SBC HL, BC
 	PUSH HL
-	JP forth_next
+	JP next
 
 
-	HEADER forth_align, "ALIGN"
-	DW forth_next
-forth_align:
+	HEADER align, "ALIGN", 1
+	DW next
+align:
 
 
-	HEADER forth_aligned, "ALIGNED"
-	DW forth_next
-forth_aligned:
+	HEADER aligned, "ALIGNED", 1
+	DW next
+aligned:
 
 
-	HEADER forth_chars, "CHARS"
-	DW forth_next
-forth_chars:
+	HEADER chars, "CHARS", 1
+	DW next
+chars:
 
 
-	HEADER forth_allot, "ALLOT"
+	HEADER allot, "ALLOT", 0
 	DW $ + 2
-forth_allot:
-	IF FORTH_CHECKED
-		CALL forth_dat_holds_1
+allot:
+	IF CHECKED
+		CALL dat_holds_1
 	ENDIF
 	POP DE
-	LD HL, (forth_h)
+	LD HL, (h_)
 	ADD HL, DE
-	LD (forth_h), HL
-	JP forth_next
+	LD (h_), HL
+	JP next
 
 
-	HEADER forth_and, "AND"
+	HEADER and, "AND", 0
 	DW $ + 2
-forth_and:
-	IF FORTH_CHECKED
-		CALL forth_dat_holds_2
+and:
+	IF CHECKED
+		CALL dat_holds_2
 	ENDIF
 	POP BC
 	POP DE
@@ -719,14 +745,14 @@ forth_and:
 	AND E
 	LD C, A
 	PUSH BC
-	JP forth_next
+	JP next
 
 
-	HEADER forth_or, "OR"
+	HEADER or, "OR", 0
 	DW $ + 2
-forth_or:
-	IF FORTH_CHECKED
-		CALL forth_dat_holds_2
+or:
+	IF CHECKED
+		CALL dat_holds_2
 	ENDIF
 	POP BC
 	POP DE
@@ -737,14 +763,14 @@ forth_or:
 	OR E
 	LD C, A
 	PUSH BC
-	JP forth_next
+	JP next
 
 
-	HEADER forth_xor, "XOR"
+	HEADER xor, "XOR", 0
 	DW $ + 2
-forth_xor:
-	IF FORTH_CHECKED
-		CALL forth_dat_holds_2
+xor:
+	IF CHECKED
+		CALL dat_holds_2
 	ENDIF
 	POP BC
 	POP DE
@@ -755,72 +781,72 @@ forth_xor:
 	XOR E
 	LD C, A
 	PUSH BC
-	JP forth_next
+	JP next
 
 
-	HEADER forth_bl, "BL"
-	DW forth_constant_code
-forth_bl:
+	HEADER bl, "BL", 0
+	DW constant_code
+bl:
 	DW ' '
 
 
-	HEADER forth_c_store, "C!"
+	HEADER c_store, "C!", 0
 	DW $ + 2
-forth_c_store:
-	IF FORTH_CHECKED
-		CALL forth_dat_holds_2
+c_store:
+	IF CHECKED
+		CALL dat_holds_2
 	ENDIF
 	POP HL
 	POP DE
 	LD (HL), E
-	JP forth_next
+	JP next
 
 
-	HEADER forth_c_comma, "C,"
+	HEADER c_comma, "C,", 0
 	DW $ + 2
-forth_c_comma:
-	IF FORTH_CHECKED
-		CALL forth_dat_holds_1
+c_comma:
+	IF CHECKED
+		CALL dat_holds_1
 	ENDIF
 	POP DE
-	LD HL, (forth_h)
+	LD HL, (h_)
 	LD (HL), E
 	INC HL
-	LD (forth_h), HL
-	JP forth_next
+	LD (h_), HL
+	JP next
 
 
-	HEADER forth_c_fetch, "C@"
+	HEADER c_fetch, "C@", 0
 	DW $ + 2
-forth_c_fetch:
-	IF FORTH_CHECKED
-		CALL forth_dat_holds_1
+c_fetch:
+	IF CHECKED
+		CALL dat_holds_1
 	ENDIF
 	POP HL
 	LD E, (HL)
 	LD D, 0
 	PUSH DE
-	JP forth_next
+	JP next
 
 
-	HEADER forth_cell_plus, "CELL+"
+	HEADER cell_plus, "CELL+", 0
 	DW $ + 2
-forth_cell_plus:
-	IF FORTH_CHECKED
-		CALL forth_dat_holds_1
+cell_plus:
+	IF CHECKED
+		CALL dat_holds_1
 	ENDIF
 	POP HL
 	INC HL
 	INC HL
 	PUSH HL
-	JP forth_next
+	JP next
 
 
-	HEADER forth_count, "COUNT"
+	HEADER count, "COUNT", 0
 	DW $ + 2
-forth_count:
-	IF FORTH_CHECKED
-		CALL forth_dat_holds_1_room_1
+count:
+	IF CHECKED
+		CALL dat_holds_1_room_1
 	ENDIF
 	POP HL
 	LD E, (HL)
@@ -828,127 +854,127 @@ forth_count:
 	LD D, 0
 	PUSH DE
 	PUSH HL
-	JP forth_next
+	JP next
 
 
-	HEADER forth_depth, "DEPTH"
-	DW forth_colon_code
-forth_depth:
-	DX forth_s_zero-2
-	DX forth_tick_s-2
-	DB forth_minus_tok
-	DB forth_two_slash_tok
-	DB forth_exit_tok
+	HEADER depth, "DEPTH", 0
+	DW colon_code
+depth:
+	DX s_zero-2
+	DX tick_s-2
+	DB minus_tok
+	DB two_slash_tok
+	DB exit_tok
 
 
-	HEADER forth_drop, "DROP"
+	HEADER drop, "DROP", 0
 	DW $ + 2
-forth_drop:
-	IF FORTH_CHECKED
-		CALL forth_dat_holds_1
+drop:
+	IF CHECKED
+		CALL dat_holds_1
 	ENDIF
 	POP HL
-	JP forth_next
+	JP next
 
 
-	HEADER forth_dup, "DUP"
+	HEADER dup, "DUP", 0
 	DW $ + 2
-forth_dup:
-	IF FORTH_CHECKED
-		CALL forth_dat_holds_1_room_1
+dup:
+	IF CHECKED
+		CALL dat_holds_1_room_1
 	ENDIF
 	POP HL
 	PUSH HL
 	PUSH HL
-	JP forth_next
+	JP next
 
 
 	; : MAX 2DUP < IF SWAP THEN DROP ;
-	HEADER forth_max, "MAX"
-	DW forth_colon_code
-forth_max:
-	DB forth_two_dup_tok
-	DB forth_less_than_tok
-	DB forth_if_raw_tok
+	HEADER max, "MAX", 0
+	DW colon_code
+max:
+	DB two_dup_tok
+	DB less_than_tok
+	DB if_raw_tok
 	DB .skip-$-1
-	DB forth_swap_tok
+	DB swap_tok
 .skip:
-	DB forth_drop_tok
-	DB forth_exit_tok
+	DB drop_tok
+	DB exit_tok
 
 
-	HEADER forth_cmove, "CMOVE"
+	HEADER cmove, "CMOVE", 0
 	DW $ + 2
-forth_cmove:
-	IF FORTH_CHECKED
-		CALL forth_dat_holds_3
+cmove:
+	IF CHECKED
+		CALL dat_holds_3
 	ENDIF
 	POP BC
 	POP DE
 	POP HL
 	LD A, C
 	OR B
-	JP Z, forth_next
+	JP Z, next
 	LDIR
-	JP forth_next
+	JP next
 
 
-	HEADER forth_cmove_up, "CMOVE>"
+	HEADER cmove_up, "CMOVE>", 0
 	DW $ + 2
-forth_cmove_up:
-	IF FORTH_CHECKED
-		CALL forth_dat_holds_3
+cmove_up:
+	IF CHECKED
+		CALL dat_holds_3
 	ENDIF
 	POP BC
 	POP HL
 	POP DE
 	LD A, C
 	OR B
-	JP Z, forth_next
+	JP Z, next
 	ADD HL, BC
 	DEC HL
 	EX DE, HL
 	ADD HL, BC
 	DEC HL
 	LDDR
-	JP forth_next
+	JP next
 
 
-	HEADER forth_move, "MOVE"
-	DW forth_colon_code
-forth_move:
+	HEADER move, "MOVE", 0
+	DW colon_code
+move:
 	; : MOVE -ROT 2DUP < IF ROT CMOVE> ELSE ROT CMOVE THEN ;
-	DB forth_minus_rot_tok
-	DB forth_two_dup_tok
-	DB forth_less_than_tok
-	DB forth_if_raw_tok
+	DB minus_rot_tok
+	DB two_dup_tok
+	DB less_than_tok
+	DB if_raw_tok
 	DB .move__else-$-1
-	DB forth_rot_tok
-	DX forth_cmove_up-2
-	DB forth_else_skip_tok
+	DB rot_tok
+	DX cmove_up-2
+	DB else_skip_tok
 	DB .move__else_skip-$-1
 .move__else:
-	DB forth_rot_tok
-	DX forth_cmove-2
+	DB rot_tok
+	DX cmove-2
 .move__else_skip:
-	DB forth_exit_tok
+	DB exit_tok
 
 
 	; : NEGATE  0 SWAP - ;
-	HEADER forth_negate, "NEGATE"
-	DW forth_colon_code
-forth_negate:
-	DB forth_zero_literal_tok
-	DB forth_swap_tok
-	DB forth_minus_tok
-	DB forth_exit_tok
+	HEADER negate, "NEGATE", 0
+	DW colon_code
+negate:
+	DB zero_literal_tok
+	DB swap_tok
+	DB minus_tok
+	DB exit_tok
 
 
-	HEADER forth_question_do_raw, "(?DO)"
+	HEADER question_do_raw, "(?DO)", 0
 	DW $ + 2
-forth_question_do_raw:
-	IF FORTH_CHECKED
-		CALL forth_ret_room_2
+question_do_raw:
+	IF CHECKED
+		CALL ret_room_2
 	ENDIF
 	INC IY
 	; BC = iterator
@@ -959,7 +985,7 @@ forth_question_do_raw:
 	LD H, D
 	OR A
 	SBC HL, BC
-	JR Z, .forth_question_do_raw__jump
+	JR Z, .question_do_raw__jump
 
 	; Push limit,iterator to ret stack
 	DEC IX
@@ -971,19 +997,19 @@ forth_question_do_raw:
 	LD (IX+0), C
 	LD (IX+1), B
 
-	JP forth_next
+	JP next
 	
 	; If iterator=limit skip loop
-.forth_question_do_raw__jump:
+.question_do_raw__jump:
 	LD E, (IY-1)
 	LD D, 0
 	ADD IY, DE
-	JP forth_next
+	JP next
 
 
-	HEADER forth_loop_raw, "(LOOP)"
+	HEADER loop_raw, "(LOOP)", 0
 	DW $ + 2
-forth_loop_raw:
+loop_raw:
 	; DE = iterator
 	LD E, (IX+0)
 	LD D, (IX+1)
@@ -993,44 +1019,44 @@ forth_loop_raw:
 	INC DE
 	OR A
 	SBC HL, DE
-	JR NZ, .forth_loop_raw__loop
+	JR NZ, .loop_raw__loop
 	LD BC, 4
 	ADD IX, BC
 	INC IY
-	JP forth_next
-.forth_loop_raw__loop:
+	JP next
+.loop_raw__loop:
 	LD (IX+0), E
 	LD (IX+1), D
 	LD E, (IY+0)
 	LD D, 0xFF
 	ADD IY, DE
-	JP forth_next
+	JP next
 
 
 	; : TYPE 0 ?DO DUP C@ EMIT 1+ LOOP DROP ;
-	HEADER forth_type, "TYPE"
-	DW forth_colon_code
-forth_type:
-	DB forth_zero_literal_tok
-	DB forth_question_do_raw_tok
-	DB .forth_type__skip-$-1
-.forth_type__loop:
-	DB forth_dup_tok
-	DB forth_c_fetch_tok
-	DX forth_emit-2
-	DB forth_one_plus_tok
-	DB forth_loop_raw_tok
-	DB .forth_type__loop-$+256
-.forth_type__skip:
-	DB forth_drop_tok
-	DB forth_exit_tok
+	HEADER type, "TYPE", 0
+	DW colon_code
+type:
+	DB zero_literal_tok
+	DB question_do_raw_tok
+	DB .type__skip-$-1
+.type__loop:
+	DB dup_tok
+	DB c_fetch_tok
+	DX emit-2
+	DB one_plus_tok
+	DB loop_raw_tok
+	DB .type__loop-$+256
+.type__skip:
+	DB drop_tok
+	DB exit_tok
 
 
-	HEADER forth_s_quote_raw, '(S")'
+	HEADER s_quote_raw, '(S")', 0
 	DW $ + 2
-forth_s_quote_raw:
-	IF FORTH_CHECKED
-		CALL forth_dat_room_2
+s_quote_raw:
+	IF CHECKED
+		CALL dat_room_2
 	ENDIF
 	PUSH IY
 	POP HL
@@ -1041,14 +1067,14 @@ forth_s_quote_raw:
 	PUSH DE ; length
 	INC DE
 	ADD IY, DE
-	JP forth_next
+	JP next
 
 
-	HEADER forth_over, "OVER"
+	HEADER over, "OVER", 0
 	DW $ + 2
-forth_over:
-	IF FORTH_CHECKED
-		CALL forth_dat_holds_2_room_1
+over:
+	IF CHECKED
+		CALL dat_holds_2_room_1
 	ENDIF
 	LD HL, 2
 	ADD HL, SP
@@ -1056,40 +1082,40 @@ forth_over:
 	INC HL
 	LD D, (HL)
 	PUSH DE
-	JP forth_next
+	JP next
 
 
-	HEADER forth_reset_stacks, "RESET-STACKS"
+	HEADER reset_stacks, "RESET-STACKS", 0
 	DW $ + 2
-forth_reset_stacks:
+reset_stacks:
 	LD IX, return_stack_top
 	LD SP, param_stack_top
-	JP forth_next
+	JP next
 
 
-	HEADER forth_quit, "QUIT"
-	DW forth_colon_code
-forth_quit:
+	HEADER quit, "QUIT", 0
+	DW colon_code
+quit:
 	; : QUIT  BEGIN -' IF NUMBER ELSE EXECUTE THEN 0 UNTIL ;
-	DX forth_reset_stacks-2
-	; DW forth_interpret-2
-	DB forth_exit_tok
+	DX reset_stacks-2
+	; DW interpret-2
+	DB exit_tok
 
 
 	; : ERASE 0 FILL ;
-	HEADER forth_erase, "ERASE"
-	DW forth_colon_code
-forth_erase:
-	DB forth_zero_literal_tok
-	DX forth_fill-2
-	DB forth_exit_tok
+	HEADER erase, "ERASE", 0
+	DW colon_code
+erase:
+	DB zero_literal_tok
+	DX fill-2
+	DB exit_tok
 
 
-	HEADER forth_fill, "FILL"
+	HEADER fill, "FILL", 0
 	DW $ + 2
-forth_fill:
-	IF FORTH_CHECKED
-		CALL forth_dat_holds_3
+fill:
+	IF CHECKED
+		CALL dat_holds_3
 	ENDIF
 	POP DE
 	POP BC
@@ -1107,40 +1133,40 @@ forth_fill:
 	INC DE
 	LDIR
 .exit:
-	JP forth_next
+	JP next
 
 
-	HEADER forth_fetch, "@"
+	HEADER fetch, "@", 0
 	DW $ + 2
-forth_fetch:
-	IF FORTH_CHECKED
-		CALL forth_dat_holds_1
+fetch:
+	IF CHECKED
+		CALL dat_holds_1
 	ENDIF
 	POP HL
 	LD E, (HL)
 	INC HL
 	LD D, (HL)
 	PUSH DE
-	JP forth_next
+	JP next
 
 
-	HEADER forth_tick_s, "'S"
+	HEADER tick_s, "'S", 0
 	DW $ + 2
-forth_tick_s:
-	IF FORTH_CHECKED
-		CALL forth_dat_room_1
+tick_s:
+	IF CHECKED
+		CALL dat_room_1
 	ENDIF
 	LD HL, 0
 	ADD HL, SP
 	PUSH HL
-	JP forth_next
+	JP next
 
 
-	HEADER forth_rot, "ROT"
+	HEADER rot, "ROT", 0
 	DW $ + 2
-forth_rot:
-	IF FORTH_CHECKED
-		CALL forth_dat_holds_3
+rot:
+	IF CHECKED
+		CALL dat_holds_3
 	ENDIF
 	POP HL
 	POP DE
@@ -1148,45 +1174,45 @@ forth_rot:
 	PUSH DE
 	PUSH HL
 	PUSH BC
-	JP forth_next
+	JP next
 
 
-	HEADER forth_swap, "SWAP"
+	HEADER swap, "SWAP", 0
 	DW $ + 2
-forth_swap:
-	IF FORTH_CHECKED
-		CALL forth_dat_holds_2
+swap:
+	IF CHECKED
+		CALL dat_holds_2
 	ENDIF
 	POP HL
 	POP DE
 	PUSH HL
 	PUSH DE
-	JP forth_next
+	JP next
 
 
-	HEADER forth_s_zero, "S0"
-	DW forth_constant_code
-forth_s_zero:
+	HEADER s_zero, "S0", 0
+	DW constant_code
+s_zero:
 	DW param_stack_top
 
 
-	HEADER forth_to_in, ">IN"
-	DW forth_constant_code
-forth_to_in:
+	HEADER to_in, ">IN", 0
+	DW constant_code
+to_in:
 	; TODO
 
 
-	HEADER forth_minus_tick, "-'"
+	HEADER minus_tick, "-'", 0
 	DW $ + 2
-forth_minus_tick:
+minus_tick:
 	; TODO
 
 
-	HEADER forth_minus_rot, "-ROT"
+	HEADER minus_rot, "-ROT", 0
 	DW $ + 2
-forth_minus_rot:
-	IF FORTH_CHECKED
-		CALL forth_dat_holds_3
+minus_rot:
+	IF CHECKED
+		CALL dat_holds_3
 	ENDIF
 	POP BC
 	POP DE
@@ -1194,14 +1220,14 @@ forth_minus_rot:
 	PUSH BC
 	PUSH HL
 	PUSH DE
-	JP forth_next
+	JP next
 
 
-	HEADER forth_less_than, "<"
+	HEADER less_than, "<", 0
 	DW $ + 2
-forth_less_than:
-	IF FORTH_CHECKED
-		CALL forth_dat_holds_2
+less_than:
+	IF CHECKED
+		CALL dat_holds_2
 	ENDIF
 	POP HL
 	POP DE
@@ -1214,85 +1240,85 @@ forth_less_than:
 	LD B, C
 	JR C, .less_than__lt
 	PUSH BC
-	JP forth_next
+	JP next
 .less_than__lt:
 	DEC BC
 	PUSH BC
-	JP forth_next
+	JP next
 
 
 	; : > SWAP < ;
-	HEADER forth_greater_than, ">"
-	DW forth_colon_code
-forth_greater_than:
-	DB forth_swap_tok
-	DB forth_less_than_tok
-	DB forth_exit_tok
+	HEADER greater_than, ">", 0
+	DW colon_code
+greater_than:
+	DB swap_tok
+	DB less_than_tok
+	DB exit_tok
 
 
-	HEADER forth_nip, "NIP"
+	HEADER nip, "NIP", 0
 	DW $ + 2
-forth_nip:
-	IF FORTH_CHECKED
-		CALL forth_dat_holds_2
+nip:
+	IF CHECKED
+		CALL dat_holds_2
 	ENDIF
 	POP HL
 	POP DE
 	PUSH HL
-	JP forth_next
+	JP next
 
 
-	HEADER forth_else_skip, "(ELSE)"
+	HEADER else_skip, "(ELSE)", 0
 	DW $ + 2
-forth_else_skip:
+else_skip:
 	INC IY
 	LD E, (IY-1)
 	LD D, 0
 	ADD IY, DE
-	JP forth_next
+	JP next
 
 
-	HEADER repeat_raw, "(REPEAT)"
+	HEADER repeat_raw, "(REPEAT)", 0
 	DW $ + 2
 repeat_raw:
 	LD E, (IY+0)
 	LD D, 0xFF
 	ADD IY, DE
-	JP forth_next
+	JP next
 
 
-	HEADER forth_c_plus_store, "C+!"
+	HEADER c_plus_store, "C+!", 0
 	DW $ + 2
-forth_c_plus_store:
-	IF FORTH_CHECKED
-		CALL forth_dat_holds_2
+c_plus_store:
+	IF CHECKED
+		CALL dat_holds_2
 	ENDIF
 	POP HL
 	POP BC
 	LD A, (HL)
 	ADD A, C
 	LD (HL), A
-	JP forth_next
+	JP next
 
 
-	HEADER forth_c_literal, "C-LITERAL"
+	HEADER c_literal, "C-LITERAL", 0
 	DW $ + 2
-forth_c_literal:
-	IF FORTH_CHECKED
-		CALL forth_dat_room_1
+c_literal:
+	IF CHECKED
+		CALL dat_room_1
 	ENDIF
 	INC IY
 	LD E, (IY-1)
 	LD D, 0
 	PUSH DE
-	JP forth_next
+	JP next
 
 
-	HEADER forth_if_raw, "(IF)"
+	HEADER if_raw, "(IF)", 0
 	DW $ + 2
-forth_if_raw:
-	IF FORTH_CHECKED
-		CALL forth_dat_holds_1
+if_raw:
+	IF CHECKED
+		CALL dat_holds_1
 	ENDIF
 	INC IY
 	POP DE
@@ -1303,20 +1329,20 @@ forth_if_raw:
 	LD B, 0
 	ADD IY, BC
 .if_raw__end:
-	JP forth_next
+	JP next
 
 
-	HEADER forth_ms, "MS"
+	HEADER ms, "MS", 0
 	DW $ + 2
-forth_ms:
-	IF FORTH_CHECKED
-		CALL forth_dat_holds_1
+ms:
+	IF CHECKED
+		CALL dat_holds_1
 	ENDIF
 	POP DE
 .ms__ms_loop:
 	LD A, E
 	OR D
-	JP Z, forth_next
+	JP Z, next
 	; waste time
 	LD BC, (0x8000)
 	; waste time
@@ -1334,64 +1360,64 @@ forth_ms:
 
 
 	; \ P@ ( addr -- cx ) \ Read byte from port
-	HEADER p_fetch, "P@"
+	HEADER p_fetch, "P@", 0
 	DW $ + 2
 p_fetch:
-	IF FORTH_CHECKED
-		CALL forth_dat_holds_1
+	IF CHECKED
+		CALL dat_holds_1
 	ENDIF
 	POP BC
 	IN L, (C)
 	LD H, 0
 	PUSH HL
-	JP forth_next
+	JP next
 
 
 	; \ P! ( cx addr -- ) \ Write byte to port
-	HEADER p_store, "P!"
+	HEADER p_store, "P!", 0
 	DW $ + 2
 p_store:
-	IF FORTH_CHECKED
-		CALL forth_dat_holds_2
+	IF CHECKED
+		CALL dat_holds_2
 	ENDIF
 	POP BC
 	POP DE
 	OUT (C), E
-	JP forth_next
+	JP next
 
 
-	HEADER ula, "ULA"
-	DW forth_constant_code
+	HEADER ula, "ULA", 0
+	DW constant_code
 ula:
 	DW ula_val
 
 
-	HEADER halt_, "HALT"
+	HEADER halt_, "HALT", 0
 	DW $ + 2
 halt_:
 	HALT
-	JP forth_next
+	JP next
 
 
 	; : D+! ( n addr -- ) \ double in addr incremented by 2
-	HEADER forth_d_plus_store, "D1+!"
-	DW forth_colon_code
-forth_d_plus_store:
+	HEADER d_plus_store, "D1+!", 0
+	DW colon_code
+d_plus_store:
 	; DUP >R 2@ D+ R> 2! ;
-	DB forth_dup_tok
-	DB forth_to_r_tok
-	DX forth_two_fetch-2
-	DX forth_d_plus-2
-	DB forth_r_from_tok
-	DX forth_two_store-2
-	DB forth_exit_tok
+	DB dup_tok
+	DB to_r_tok
+	DX two_fetch-2
+	DX d_plus-2
+	DB r_from_tok
+	DX two_store-2
+	DB exit_tok
 
 
-	HEADER forth_d_plus, "D+"
+	HEADER d_plus, "D+", 0
 	DW $ + 2
-forth_d_plus:
-	IF FORTH_CHECKED
-		CALL forth_dat_holds_4
+d_plus:
+	IF CHECKED
+		CALL dat_holds_4
 	ENDIF
 	POP AF
 	POP BC
@@ -1404,76 +1430,88 @@ forth_d_plus:
 	EX DE, HL
 	ADC HL, BC
 	PUSH HL
-	JP forth_next
+	JP next
 
 
 	; : (2LITERAL)  R>  DUP 2 CELLS + >R  2@  ;
-	HEADER forth_two_literal_raw, "(2LITERAL)"
-	DW forth_colon_code
-forth_two_literal_raw:
-	DB forth_r_from_tok
-	DB forth_dup_tok
-	DB forth_c_literal_tok
+	HEADER two_literal_raw, "(2LITERAL)", 0
+	DW colon_code
+two_literal_raw:
+	DB r_from_tok
+	DB dup_tok
+	DB c_literal_tok
 	DB 2
-	DX forth_cells-2
-	DB forth_plus_tok
-	DB forth_to_r_tok
-	DX forth_two_fetch-2
-	DB forth_exit_tok
+	DX cells-2
+	DB plus_tok
+	DB to_r_tok
+	DX two_fetch-2
+	DB exit_tok
 
 
-	HEADER forth_r_from, "R>"
+	HEADER r_from, "R>", 0
 	DW $ + 2
-forth_r_from:
-	IF FORTH_CHECKED
-		CALL forth_dat_room_1_ret_holds_1
+r_from:
+	IF CHECKED
+		CALL dat_room_1_ret_holds_1
 	ENDIF
 	LD E, (IX+0)
 	LD D, (IX+1)
 	INC IX
 	INC IX
 	PUSH DE
-	JP forth_next
+	JP next
 
 
-	HEADER _di, "DI"
+	HEADER r_fetch, "R@", 0
+	DW $ + 2
+r_fetch:
+	IF CHECKED
+		CALL dat_room_1_ret_holds_1
+	ENDIF
+	LD E, (IX+0)
+	LD D, (IX+1)
+	PUSH DE
+	JP next
+
+
+	HEADER _di, "DI", 0
 	DW $ + 2
 _di:
 	DI
-	JP forth_next
+	JP next
 
 
-	HEADER _ei, "EI"
+	HEADER _ei, "EI", 0
 	DW $ + 2
 _ei:
 	EI
-	JP forth_next
+	JP next
 
 
 	; AT-XY ( x y -- ) \ Set next terminal x,y position
-	HEADER forth_at_xy, "AT-XY"
-	DW forth_colon_code
-forth_at_xy:
+	HEADER at_xy, "AT-XY", 0
+	DW colon_code
+at_xy:
 	; ( y ) 0 23 CLAMP T-ROW C!
-	DB forth_zero_literal_tok
-	DB forth_c_literal_tok
+	DB zero_literal_tok
+	DB c_literal_tok
 	DB 23
 	DX clamp-2
 	DX t_row-2
-	DB forth_c_store_tok
+	DB c_store_tok
 	; ( x ) 0 63 CLAMP T-COL C!
-	DB forth_zero_literal_tok
-	DB forth_c_literal_tok
+	DB zero_literal_tok
+	DB c_literal_tok
 	DB 63
 	DX clamp-2
 	DX t_col-2
-	DB forth_c_store_tok
+	DB c_store_tok
 	; ;
-	DB forth_exit_tok
+	DB exit_tok
 
 
-	HEADER keyq_len, "KEYQ-LEN"
-	DW forth_constant_code
+	HEADER keyq_len, "KEYQ-LEN", 0
+	DW constant_code
 keyq_len:
 	DW keyq_len_val
 
@@ -1482,89 +1520,89 @@ keyq_len:
 	; byte 1 = scancode which is 8*(4-bit)+(8-hrow_bit)
 	;          (this gives an index into Key Table (a) in ROM disassembly)
 	; byte 2 = flags: 1=up, 2=shift, 4=sym
-	HEADER keyq, "KEYQ"
-	DW forth_create_code
+	HEADER keyq, "KEYQ", 0
+	DW create_code
 keyq:
 	DS keyq_len_val * 2
 
 
-	HEADER keyq_s, "KEYQ-S"
-	DW forth_create_code
+	HEADER keyq_s, "KEYQ-S", 0
+	DW create_code
 keyq_s:
 	DB 0
 
 
-	HEADER keyq_e, "KEYQ-E"
-	DW forth_create_code
+	HEADER keyq_e, "KEYQ-E", 0
+	DW create_code
 keyq_e:
 	DB 0
 
 
 	; : EKEY? ( -- flags ) \ Is a key event available?
-	HEADER ekey_question, "EKEY?"
-	DW forth_colon_code
+	HEADER ekey_question, "EKEY?", 0
+	DW colon_code
 ekey_question:
 	; KEYQ-E C@ KEYQ-S C@ <> ;
 	DX keyq_e-2
-	DB forth_c_fetch_tok
+	DB c_fetch_tok
 	DX keyq_s-2
-	DB forth_c_fetch_tok
-	DB forth_not_equals_tok
-	DB forth_exit_tok
+	DB c_fetch_tok
+	DB not_equals_tok
+	DB exit_tok
 
 
 	; 0<> ( n -- flags ) \ true if n is not equal to 0
-	HEADER forth_zero_not_equals, "0<>"
-	DW forth_colon_code
-forth_zero_not_equals:
+	HEADER zero_not_equals, "0<>", 0
+	DW colon_code
+zero_not_equals:
 	; 0= INVERT ;
-	DB forth_zero_equals_tok
-	DB forth_invert_tok
-	DB forth_exit_tok
+	DB zero_equals_tok
+	DB invert_tok
+	DB exit_tok
 
 
 	; <> ( n1 n2 -- flags ) \ true if n1 is not equal to n2
-	HEADER forth_not_equals, "<>"
-	DW forth_colon_code
-forth_not_equals:
+	HEADER not_equals, "<>", 0
+	DW colon_code
+not_equals:
 	; = INVERT ;
-	DB forth_equals_tok
-	DB forth_invert_tok
-	DB forth_exit_tok
+	DB equals_tok
+	DB invert_tok
+	DB exit_tok
 
 
 	; CLAMP ( n1 n2 n3 -- n ) \ Force n1 to range [n2, n3]
-	HEADER clamp, "CLAMP"
-	DW forth_colon_code
+	HEADER clamp, "CLAMP", 0
+	DW colon_code
 clamp:
 	; ROT MIN MAX ;
-	DB forth_rot_tok
-	DX forth_min-2
-	DX forth_max-2
-	DB forth_exit_tok
+	DB rot_tok
+	DX min-2
+	DX max-2
+	DB exit_tok
 
 
 	; : MIN ( n1 n2 -- n ) \ Leave the smaller of n1 and n2
-	HEADER forth_min, "MIN"
-	DW forth_colon_code
-forth_min:
+	HEADER min, "MIN", 0
+	DW colon_code
+min:
 	; 2DUP > IF SWAP THEN DROP ;
-	DB forth_two_dup_tok
-	DB forth_greater_than_tok
-	DB forth_if_raw_tok
+	DB two_dup_tok
+	DB greater_than_tok
+	DB if_raw_tok
 	DB .skip-$-1
-	DB forth_swap_tok
+	DB swap_tok
 .skip:
-	DB forth_drop_tok
-	DB forth_exit_tok
+	DB drop_tok
+	DB exit_tok
 
 
 	; : INVERT ( x -- y ) \ Invert all bits of x
-	HEADER forth_invert, "INVERT"
+	HEADER invert, "INVERT", 0
 	DW $ + 2
-forth_invert:
-	IF FORTH_CHECKED
-		CALL forth_dat_holds_1
+invert:
+	IF CHECKED
+		CALL dat_holds_1
 	ENDIF
 	POP HL
 	LD A, L
@@ -1574,12 +1612,12 @@ forth_invert:
 	CPL
 	LD H, A
 	PUSH HL
-	JP forth_next
+	JP next
 
 
 	; EKEY ( -- x ) \ Push keyboard event when ready
-	HEADER ekey, "EKEY"
-	DW forth_colon_code
+	HEADER ekey, "EKEY", 0
+	DW colon_code
 ekey:
 	; BEGIN EKEY? HALT UNTIL \ Block for event
 .begin:
@@ -1590,35 +1628,35 @@ ekey:
 	; KEYQ KEYQ-S C@ CELLS + @ \ Receive event
 	DX keyq-2
 	DX keyq_s-2
-	DB forth_c_fetch_tok
-	DB forth_two_star_tok
-	DB forth_plus_tok
-	DB forth_fetch_tok
+	DB c_fetch_tok
+	DB two_star_tok
+	DB plus_tok
+	DB fetch_tok
 	; KEYQ-S C@ 1+ 7 AND KEYQ-S C! \ Increment KEYQ-S (mod 8)
 	DX keyq_s-2
-	DB forth_c_fetch_tok
-	DB forth_one_plus_tok
-	DB forth_c_literal_tok
+	DB c_fetch_tok
+	DB one_plus_tok
+	DB c_literal_tok
 	DB 7
-	DB forth_and_tok
+	DB and_tok
 	DX keyq_s-2
-	DB forth_c_store_tok
+	DB c_store_tok
 	; ;
-	DB forth_exit_tok
+	DB exit_tok
 
 
-	HEADER until_raw, "(UNTIL)"
+	HEADER until_raw, "(UNTIL)", 0
 	DW $ + 2
 until_raw:
-	IF FORTH_CHECKED
-		CALL forth_dat_holds_1
+	IF CHECKED
+		CALL dat_holds_1
 	ENDIF
 	POP HL
 	LD A, L
 	OR H
 	JR Z, .loop
 	INC IY
-	JP forth_next
+	JP next
 .loop:
 	LD C, (IY+0)
 	XOR A
@@ -1628,14 +1666,14 @@ until_raw:
 	SBC HL, BC
 	EX DE, HL
 	ADD IY, DE
-	JP forth_next
+	JP next
 
 
-	HEADER forth_equals, "="
+	HEADER equals, "=", 0
 	DW $ + 2
-forth_equals:
-	IF FORTH_CHECKED
-		CALL forth_dat_holds_2
+equals:
+	IF CHECKED
+		CALL dat_holds_2
 	ENDIF
 	POP HL
 	POP BC
@@ -1645,35 +1683,35 @@ forth_equals:
 	LD L, A
 	LD H, A
 	PUSH HL
-	JP forth_next
+	JP next
 .equal:
 	DEC HL
 	PUSH HL
-	JP forth_next
+	JP next
 
 
-	HEADER less_than_or_equal, "<="
-	DW forth_colon_code
+	HEADER less_than_or_equal, "<=", 0
+	DW colon_code
 less_than_or_equal:
-	DB forth_greater_than_tok
-	DB forth_invert_tok
-	DB forth_exit_tok
+	DB greater_than_tok
+	DB invert_tok
+	DB exit_tok
 
 
-	HEADER greater_than_or_equal, ">="
-	DW forth_colon_code
+	HEADER greater_than_or_equal, ">=", 0
+	DW colon_code
 greater_than_or_equal:
-	DB forth_less_than_tok
-	DB forth_invert_tok
-	DB forth_exit_tok
+	DB less_than_tok
+	DB invert_tok
+	DB exit_tok
 
 
 	; CODE 2>R
-	HEADER two_to_r, "2>R"
+	HEADER two_to_r, "2>R", 0
 	DW $ + 2
 two_to_r:
-	IF FORTH_CHECKED
-		CALL forth_dat_holds_2_ret_room_2
+	IF CHECKED
+		CALL dat_holds_2_ret_room_2
 	ENDIF
 	POP HL
 	POP DE
@@ -1683,116 +1721,110 @@ two_to_r:
 	LD (IX+1), H
 	LD (IX+2), E
 	LD (IX+3), D
-	JP forth_next
+	JP next
 
 
 	; VARIABLE KSHIFT-STATE
-	HEADER kshift_state, "KSHIFT-STATE"
-	DW forth_create_code
+	HEADER kshift_state, "KSHIFT-STATE", 0
+	DW create_code
 kshift_state:
 	DW 0
 
 
 	; : KSCAN \ Update keyboard state
-	HEADER kscan, "KSCAN"
-	DW forth_colon_code
+	HEADER kscan, "KSCAN", 0
+	DW colon_code
 kscan:
 	; \ Get state of shift keys for high byte of event
 	; $FEFE P@ 1 AND  $7FFE P@ 2 AND  OR  8 LSHIFT  KSHIFT-STATE !
-	DB forth_literal_raw_tok
+	DB literal_raw_tok
 	DW 0xFEFE
 	DX p_fetch-2
-	DB forth_one_literal_tok
-	DB forth_and_tok
-	DB forth_literal_raw_tok
+	DB one_literal_tok
+	DB and_tok
+	DB literal_raw_tok
 	DW 0x7FFE
 	DX p_fetch-2
-	DB forth_c_literal_tok
+	DB c_literal_tok
 	DB 2
-	DB forth_and_tok
-	DB forth_or_tok
-	DB forth_c_literal_tok
+	DB and_tok
+	DB or_tok
+	DB c_literal_tok
 	DB 8
 	DB lshift_tok
 	DX kshift_state
 	; \ Call per-row word
 	; 8 0 DO I KSCAN-ROW LOOP ;
-	DB forth_c_literal_tok
+	DB c_literal_tok
 	DB 8
-	DB forth_zero_literal_tok
+	DB zero_literal_tok
 	DB two_to_r_tok
 .do:
-	DB forth_r_from_tok
+	DB r_fetch_tok
 	DX kscan_row-2
-	DB forth_loop_raw_tok
+	DB loop_raw_tok
 	DB .do-$+256
-	DB forth_exit_tok
+	DB exit_tok
 
 
 	; ( n ) : KSCAN-ROW \ Scan+update a given half-row
-	HEADER kscan_row, "KSCAN-ROW"
-	DW forth_colon_code
+	HEADER kscan_row, "KSCAN-ROW", 0
+	DW colon_code
 kscan_row:
 	; \ Read row state
 	; ( n ) 1  OVER LSHIFT  INVERT  8 LSHIFT ULA OR  P@  $1F AND
-	DB forth_one_literal_tok
+	DB one_literal_tok
 	DB over_tok
 	DB lshift_tok
-	DB forth_invert_tok
-	DB forth_c_literal_tok
+	DB invert_tok
+	DB c_literal_tok
 	DB 8
 	DB lshift_tok
 	DX ula-2
-	DB forth_or_tok
+	DB or_tok
 	DX p_fetch-2
-	DB forth_c_literal_tok
+	DB c_literal_tok
 	DB 0x1F
-	DB forth_and_tok
+	DB and_tok
 	; \ Calculate state address
 	; ( n state ) OVER CHARS KSTATE +
 	DB over_tok
 	DX kstate-2
-	DB forth_plus_tok
+	DB plus_tok
 	; \ Update when state changes
-	; ( n state addr ) 2DUP C@ XOR
-	DB forth_two_dup_tok
-	DB forth_c_fetch_tok
-	DB forth_xor_tok
-	; ( n state addr xor'd )  BEGIN ?DUP WHILE
-.begin:
-	DB question_dup_tok
-	DB forth_if_raw_tok
-	DB .repeat-$-1
-	;         \ Get lowest bit 
-	; REPEAT
-	DB repeat_raw_tok
-	DB .begin-$+256
-.repeat:
+	; ( n state addr ) 2DUP C@ = IF
+	DB two_dup_tok
+	DB c_fetch_tok
+	DB equals_tok
+	DB if_raw_tok
+	DB .then-$-1
+	; THEN
+.then:
 
 
 	; \ Stores scanned key bits from the last scan
 	; CREATE KSTATE  8 CHARS  ALLOT
 	; KSTATE  8 CHARS  ERASE
-	HEADER kstate, "KSTATE"
-	DW forth_create_code
+	HEADER kstate, "KSTATE", 0
+	DW create_code
 kstate:
 	DS 8
 
 
 	; \ Stores last key press
 	; CREATE KLAST  0 C,
-	HEADER klast, "KLAST"
-	DW forth_create_code
+	HEADER klast, "KLAST", 0
+	DW create_code
 klast:
 	DB 0
 
 
 	; CODE LSHIFT ( x u -- x<<u )
-	HEADER lshift, "LSHIFT"
+	HEADER lshift, "LSHIFT", 0
 	DW $ + 2
 lshift:
-	IF FORTH_CHECKED
-		CALL forth_dat_holds_2
+	IF CHECKED
+		CALL dat_holds_2
 	ENDIF
 	POP DE
 	POP HL
@@ -1807,7 +1839,7 @@ lshift:
 	DJNZ .loop
 .finish:
 	PUSH HL
-	JP forth_next
+	JP next
 .zero:
 	LD HL, 0
 	JR .finish
