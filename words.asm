@@ -93,12 +93,69 @@ int:
 	DB exit_tok
 
 
+	; \ Get name string from symbol header address
+	; ( sym-addr ) : >SYM ( c-addr n+ )
+	HEADER to_sym, ">SYM", 0
+	DW colon_code
+to_sym:
+	; CELL+ CELL+  DUP C@ $7F AND  SWAP CHAR+ SWAP;
+	DX cell_plus-2
+	DX cell_plus-2
+	DB dup_tok
+	DB c_fetch_tok
+	DB c_literal_tok
+	DB 0x7F
+	DB and_tok
+	DB swap_tok
+	DB one_plus_tok
+	DB swap_tok
+	DB exit_tok
+
+
+	; \ Type all word names in dictionary to the output device
+	; : WORDS
+	HEADER words, "WORDS", 0
+	DW colon_code
+words:
+	; SYM-LAST @
+	DX sym_last-2
+	DB fetch_tok
+	; BEGIN
+.begin:
+	;         \ Print name
+	;         DUP >SYM TYPE  BL EMIT
+	DB dup_tok
+	DX to_sym-2
+	DX type-2
+	DX bl-2
+	DX emit-2
+	;         \ Goto next symbol
+	;         @
+	DB fetch_tok
+	; DUP 0= UNTIL DROP
+	DB dup_tok
+	DB zero_equals_tok
+	DB until_raw_tok
+	DB .begin-$+256
+	DB drop_tok
+	; CR ;
+	DX cr-2
+	DB exit_tok
+
+
 	; : MAIN
 	HEADER main, "MAIN", 0
 	DW colon_code
 main:
-	; PAGE \ Clear screen
+	; \ Clear screen
+	; PAGE
 	DX page-2
+	; \ Display defined words
+	; WORDS CR
+	DX words-2
+	DX cr-2
+
+	; \ Print all printable characters
 	; 128 20 DO I EMIT LOOP CR CR ;
 	DB c_literal_tok
 	DB 128
@@ -112,33 +169,8 @@ main:
 	DB .do1-$+256
 	DX cr-2
 	DX cr-2
-	; 5 0 DO S" ..." TYPE LOOP  CR CR S" ..." TYPE   \ test program
-	DB c_literal_tok
-	DB 5
-	DB zero_literal_tok
-	DB two_to_r_tok
-.do2:
-	DB s_quote_raw_tok
-	DB .s1_end-$-1
-	DM ": FILL ROT ROT 0 ?DO 2DUP C! 1+ LOOP 2DROP ; ok "
-.s1_end:
-	DX type-2
-	DB loop_raw_tok
-	DB .do2-$+256
-.loop_skip:
-	DX cr-2
-	DX cr-2
-	DB s_quote_raw_tok
-	DB .s2_end-$-1
-	DM "Hello, world!\n\n"
-.s2_end:
-	DX type-2
-	DB s_quote_raw_tok
-	DB .s3_end-$-1
-	DM "The quick, brown fox jumped swiftly over the lazy dog.\n\n"
-.s3_end:
-	DX type-2
-	; BEGIN EKEY DROP '.' EMIT 0 UNTIL \ Endlessly get input and print periods
+	; \ Endlessly get input and print periods
+	; BEGIN EKEY DROP '.' EMIT 0 UNTIL
 .begin:
 	DX ekey-2
 	DB drop_tok
@@ -147,7 +179,7 @@ main:
 	DX emit-2
 	DB zero_literal_tok
 	DB until_raw_tok
-	DB $-1-.begin
+	DB .begin-$+256
 	DB exit_tok ; will never be reached
 
 
@@ -1624,7 +1656,7 @@ ekey:
 	DX ekey_question-2
 	DX halt_-2
 	DB until_raw_tok
-	DB $-1-.begin
+	DB .begin-$+256
 	; KEYQ KEYQ-S C@ CELLS + @ \ Receive event
 	DX keyq-2
 	DX keyq_s-2
@@ -1659,13 +1691,8 @@ until_raw:
 	JP next
 .loop:
 	LD C, (IY+0)
-	XOR A
-	LD B, A
-	LD HL, 0
-	INC BC
-	SBC HL, BC
-	EX DE, HL
-	ADD IY, DE
+	LD B, 0xFF
+	ADD IY, BC
 	JP next
 
 

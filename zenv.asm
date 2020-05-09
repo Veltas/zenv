@@ -2,8 +2,8 @@
 
 ; ZENV - bootstrapping a Forth system
 
-	MACRO DX addr
-	DB (addr) >> 8, (addr) & 0xFF
+	MACRO DX ___addr
+	DB (___addr) >> 8, (___addr) & 0xFF
 	ENDM
 
 
@@ -28,17 +28,17 @@ return_stack_size: EQU 0xE0
 this_header = 0
 symb_pos = symbols
 
-	MACRO HEADER symbol, text, immediate
+	MACRO HEADER ___symbol, ___text, ___immediate
 main_pos = $
 	ORG symb_pos
 prev_header = this_header
 this_header = $
 	DW prev_header
-	DB (.se - .ss) | (immediate << 7)
+	DW ___symbol - 2
+	DB (.se - .ss) | (___immediate << 7)
 .ss:
-	DM text
+	DM ___text
 .se:
-	DW symbol - 2
 symb_pos = $
 	ORG main_pos
 	ENDM
