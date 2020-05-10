@@ -1534,7 +1534,7 @@ halt_:
 	JP next
 
 
-	; : D+! ( n addr -- ) \ double in addr incremented by 2
+	; : D+! ( d addr -- ) \ double in addr incremented by d
 	HEADER d_plus_store, "D+!", 0
 	DW colon_code
 d_plus_store:
