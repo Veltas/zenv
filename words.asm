@@ -90,7 +90,7 @@ int:
 	; \ KSCAN \ TODO
 ;	DX kscan-2
 	; ;
-	DB exit_tok
+	DT exit
 
 
 	; \ Get name string from symbol header address
@@ -101,15 +101,15 @@ to_sym:
 	; CELL+ CELL+  DUP C@ $7F AND  SWAP CHAR+ SWAP;
 	DX cell_plus-2
 	DX cell_plus-2
-	DB dup_tok
-	DB c_fetch_tok
-	DB c_literal_tok
+	DT dup
+	DT c_fetch
+	DT c_literal
 	DB 0x7F
-	DB and_tok
-	DB swap_tok
-	DB one_plus_tok
-	DB swap_tok
-	DB exit_tok
+	DT and
+	DT swap
+	DT one_plus
+	DT swap
+	DT exit
 
 
 	; \ Type all word names in dictionary to the output device
@@ -119,28 +119,28 @@ to_sym:
 words:
 	; SYM-LAST @
 	DX sym_last-2
-	DB fetch_tok
+	DT fetch
 	; BEGIN
 .begin:
 	;         \ Print name
 	;         DUP >SYM TYPE  BL EMIT
-	DB dup_tok
+	DT dup
 	DX to_sym-2
 	DX type-2
 	DX bl-2
 	DX emit-2
 	;         \ Goto next symbol
 	;         @
-	DB fetch_tok
+	DT fetch
 	; DUP 0= UNTIL DROP
-	DB dup_tok
-	DB zero_equals_tok
-	DB until_raw_tok
+	DT dup
+	DT zero_equals
+	DT until_raw
 	DB .begin-$+256
-	DB drop_tok
+	DT drop
 	; CR ;
 	DX cr-2
-	DB exit_tok
+	DT exit
 
 
 	; : MAIN
@@ -158,14 +158,14 @@ main:
 	; BEGIN EKEY DROP '.' EMIT 0 UNTIL
 .begin:
 	DX ekey-2
-	DB drop_tok
-	DB c_literal_tok
+	DT drop
+	DT c_literal
 	DB '.'
 	DX emit-2
-	DB zero_literal_tok
-	DB until_raw_tok
+	DT zero_literal
+	DT until_raw
 	DB .begin-$+256
-	DB exit_tok ; will never be reached
+	DT exit
 
 
 	HEADER zero_literal, "0", 0
@@ -210,44 +210,44 @@ literal_raw:
 scroll:
 	; T-ROW C@ 8 -  0 MAX  T-ROW C!
 	DX t_row-2
-	DB c_fetch_tok
-	DB c_literal_tok
+	DT c_fetch
+	DT c_literal
 	DB 8
-	DB minus_tok
-	DB zero_literal_tok
+	DT minus
+	DT zero_literal
 	DX max-2
 	DX t_row-2
-	DB c_store_tok
+	DT c_store
 	; DISPLAY-FILE 2048 +  DISPLAY-FILE  4096  CMOVE
-	DB literal_raw_tok
+	DT literal_raw
 	DW display_file_val + 2048
 	DX display_file-2
-	DB literal_raw_tok
+	DT literal_raw
 	DW 4096
 	DX cmove-2
 	; ATTR-FILE 256 +  ATTR-FILE  512  CMOVE
-	DB literal_raw_tok
+	DT literal_raw
 	DW attr_file_val + 256
 	DX attr_file-2
-	DB literal_raw_tok
+	DT literal_raw
 	DW 512
 	DX cmove-2
 	; DISPLAY-FILE 4096 +  2048  ERASE
-	DB literal_raw_tok
+	DT literal_raw
 	DW display_file_val + 4096
-	DB literal_raw_tok
+	DT literal_raw
 	DW 2048
 	DX erase-2
 	; ATTR-FILE 512 +  256  T-ATTR C@  FILL
-	DB literal_raw_tok
+	DT literal_raw
 	DW attr_file_val + 512
-	DB literal_raw_tok
+	DT literal_raw
 	DW 256
 	DX t_attr-2
-	DB c_fetch_tok
+	DT c_fetch
 	DX fill-2
 	; EXIT
-	DB exit_tok
+	DT exit
 
 
 	; : CR
@@ -256,23 +256,23 @@ scroll:
 cr:
 	; T-ROW C@ 22 > IF SCROLL THEN 1 T-ROW C+!
 	DX t_row-2
-	DB c_fetch_tok
-	DB c_literal_tok
+	DT c_fetch
+	DT c_literal
 	DB 22
-	DB greater_than_tok
-	DB if_raw_tok
+	DT greater_than
+	DT if_raw
 	DB .cr__if_skip-$-1
 	DX scroll-2
 .cr__if_skip:
-	DB one_literal_tok
+	DT one_literal
 	DX t_row-2
-	DB c_plus_store_tok
+	DT c_plus_store
 	; 0 T-COL C!
-	DB zero_literal_tok
+	DT zero_literal
 	DX t_col-2
-	DB c_store_tok
+	DT c_store
 	; ;
-	DB exit_tok
+	DT exit
 
 
 	HEADER emit, "EMIT", 0
@@ -509,18 +509,18 @@ store:
 	DW colon_code
 brdr_store:
 	; 7 AND  ULA P@  0xF8 AND  OR  ULA P! ;
-	DB c_literal_tok
+	DT c_literal
 	DB 7
-	DB and_tok
+	DT and
 	DX ula-2
 	DX p_fetch-2
-	DB c_literal_tok
+	DT c_literal
 	DB 0xF8
-	DB and_tok
-	DB or_tok
+	DT and
+	DT or
 	DX ula-2
 	DX p_store-2
-	DB exit_tok
+	DT exit
 
 
 	; \ Clear screen, reset terminal to top-left
@@ -531,15 +531,15 @@ page:
 	; \ Match border to T-ATTR
 	; T-ATTR C@  3 RSHIFT  BRDR!
 	DX t_attr-2
-	DB c_fetch_tok
-	DB c_literal_tok
+	DT c_fetch
+	DT c_literal
 	DB 3
-	DB rshift_tok
+	DT rshift
 	DX brdr_store-2
 	; \ Reset terminal col/row
 	; 0 0 AT-XY
-	DB zero_literal_tok
-	DB zero_literal_tok
+	DT zero_literal
+	DT zero_literal
 	DX at_xy-2
 	; \ Erase bitmap
 	; DISPLAY-FILE DISPLAY-SIZE ERASE
@@ -551,10 +551,10 @@ page:
 	DX attr_file-2
 	DX attr_size-2
 	DX t_attr-2
-	DB c_fetch_tok
+	DT c_fetch
 	DX fill-2
 	; ;
-	DB exit_tok
+	DT exit
 
 
 	HEADER plus, "+", 0
@@ -997,9 +997,9 @@ count:
 depth:
 	DX s_zero-2
 	DX tick_s-2
-	DB minus_tok
-	DB two_slash_tok
-	DB exit_tok
+	DT minus
+	DT two_slash
+	DT exit
 
 
 	HEADER drop, "DROP", 0
@@ -1028,14 +1028,14 @@ dup:
 	HEADER max, "MAX", 0
 	DW colon_code
 max:
-	DB two_dup_tok
-	DB less_than_tok
-	DB if_raw_tok
+	DT two_dup
+	DT less_than
+	DT if_raw
 	DB .skip-$-1
-	DB swap_tok
+	DT swap
 .skip:
-	DB drop_tok
-	DB exit_tok
+	DT drop
+	DT exit
 
 
 	HEADER cmove, "CMOVE", 0
@@ -1079,30 +1079,30 @@ cmove_up:
 	DW colon_code
 move:
 	; : MOVE -ROT 2DUP < IF ROT CMOVE> ELSE ROT CMOVE THEN ;
-	DB minus_rot_tok
-	DB two_dup_tok
-	DB less_than_tok
-	DB if_raw_tok
+	DT minus_rot
+	DT two_dup
+	DT less_than
+	DT if_raw
 	DB .move__else-$-1
-	DB rot_tok
+	DT rot
 	DX cmove_up-2
-	DB else_skip_tok
+	DT else_skip
 	DB .move__else_skip-$-1
 .move__else:
-	DB rot_tok
+	DT rot
 	DX cmove-2
 .move__else_skip:
-	DB exit_tok
+	DT exit
 
 
 	; : NEGATE  0 SWAP - ;
 	HEADER negate, "NEGATE", 0
 	DW colon_code
 negate:
-	DB zero_literal_tok
-	DB swap_tok
-	DB minus_tok
-	DB exit_tok
+	DT zero_literal
+	DT swap
+	DT minus
+	DT exit
 
 
 	HEADER question_do_raw, "(?DO)", 0
@@ -1172,19 +1172,19 @@ loop_raw:
 	HEADER type, "TYPE", 0
 	DW colon_code
 type:
-	DB zero_literal_tok
-	DB question_do_raw_tok
+	DT zero_literal
+	DT question_do_raw
 	DB .type__skip-$-1
 .type__loop:
-	DB dup_tok
-	DB c_fetch_tok
+	DT dup
+	DT c_fetch
 	DX emit-2
-	DB one_plus_tok
-	DB loop_raw_tok
+	DT one_plus
+	DT loop_raw
 	DB .type__loop-$+256
 .type__skip:
-	DB drop_tok
-	DB exit_tok
+	DT drop
+	DT exit
 
 
 	HEADER s_quote_raw, '(S")', 0
@@ -1234,16 +1234,16 @@ quit:
 	; : QUIT  BEGIN -' IF NUMBER ELSE EXECUTE THEN 0 UNTIL ;
 	DX reset_stacks-2
 	; DW interpret-2
-	DB exit_tok
+	DT exit
 
 
 	; : ERASE 0 FILL ;
 	HEADER erase, "ERASE", 0
 	DW colon_code
 erase:
-	DB zero_literal_tok
+	DT zero_literal
 	DX fill-2
-	DB exit_tok
+	DT exit
 
 
 	HEADER fill, "FILL", 0
@@ -1386,9 +1386,9 @@ less_than:
 	HEADER greater_than, ">", 0
 	DW colon_code
 greater_than:
-	DB swap_tok
-	DB less_than_tok
-	DB exit_tok
+	DT swap
+	DT less_than
+	DT exit
 
 
 	HEADER nip, "NIP", 0
@@ -1572,9 +1572,9 @@ d_plus_store:
 	DX tuck2-2
 	DX two_fetch-2
 	DX d_plus-2
-	DB rot_tok
+	DT rot
 	DX two_store-2
-	DB exit_tok
+	DT exit
 
 
 	HEADER d_plus, "D+", 0
@@ -1601,15 +1601,15 @@ d_plus:
 	HEADER two_literal_raw, "(2LITERAL)", 0
 	DW colon_code
 two_literal_raw:
-	DB r_from_tok
-	DB dup_tok
-	DB c_literal_tok
+	DT r_from
+	DT dup
+	DT c_literal
 	DB 2
 	DX cells-2
-	DB plus_tok
-	DB to_r_tok
+	DT plus
+	DT to_r
 	DX two_fetch-2
-	DB exit_tok
+	DT exit
 
 
 	HEADER r_from, "R>", 0
@@ -1657,21 +1657,21 @@ _ei:
 	DW colon_code
 at_xy:
 	; ( y ) 0 23 CLAMP T-ROW C!
-	DB zero_literal_tok
-	DB c_literal_tok
+	DT zero_literal
+	DT c_literal
 	DB 23
 	DX clamp-2
 	DX t_row-2
-	DB c_store_tok
+	DT c_store
 	; ( x ) 0 63 CLAMP T-COL C!
-	DB zero_literal_tok
-	DB c_literal_tok
+	DT zero_literal
+	DT c_literal
 	DB t_width-1
 	DX clamp-2
 	DX t_col-2
-	DB c_store_tok
+	DT c_store
 	; ;
-	DB exit_tok
+	DT exit
 
 
 	HEADER keyq_len, "KEYQ-LEN", 0
@@ -1708,11 +1708,11 @@ keyq_e:
 ekey_question:
 	; KEYQ-E C@ KEYQ-S C@ <> ;
 	DX keyq_e-2
-	DB c_fetch_tok
+	DT c_fetch
 	DX keyq_s-2
-	DB c_fetch_tok
-	DB not_equals_tok
-	DB exit_tok
+	DT c_fetch
+	DT not_equals
+	DT exit
 
 
 	; 0<> ( n -- flags ) \ true if n is not equal to 0
@@ -1720,9 +1720,9 @@ ekey_question:
 	DW colon_code
 zero_not_equals:
 	; 0= INVERT ;
-	DB zero_equals_tok
-	DB invert_tok
-	DB exit_tok
+	DT zero_equals
+	DT invert
+	DT exit
 
 
 	; <> ( n1 n2 -- flags ) \ true if n1 is not equal to n2
@@ -1730,9 +1730,9 @@ zero_not_equals:
 	DW colon_code
 not_equals:
 	; = INVERT ;
-	DB equals_tok
-	DB invert_tok
-	DB exit_tok
+	DT equals
+	DT invert
+	DT exit
 
 
 	; CLAMP ( n1 n2 n3 -- n ) \ Force n1 to range [n2, n3]
@@ -1740,10 +1740,10 @@ not_equals:
 	DW colon_code
 clamp:
 	; ROT MIN MAX ;
-	DB rot_tok
+	DT rot
 	DX min-2
 	DX max-2
-	DB exit_tok
+	DT exit
 
 
 	; : MIN ( n1 n2 -- n ) \ Leave the smaller of n1 and n2
@@ -1751,14 +1751,14 @@ clamp:
 	DW colon_code
 min:
 	; 2DUP > IF SWAP THEN DROP ;
-	DB two_dup_tok
-	DB greater_than_tok
-	DB if_raw_tok
+	DT two_dup
+	DT greater_than
+	DT if_raw
 	DB .skip-$-1
-	DB swap_tok
+	DT swap
 .skip:
-	DB drop_tok
-	DB exit_tok
+	DT drop
+	DT exit
 
 
 	; : INVERT ( x -- y ) \ Invert all bits of x
@@ -1787,26 +1787,26 @@ ekey:
 .begin:
 	DX ekey_question-2
 	DX halt_-2
-	DB until_raw_tok
+	DT until_raw
 	DB .begin-$+256
 	; KEYQ KEYQ-S C@ CELLS + @ \ Receive event
 	DX keyq-2
 	DX keyq_s-2
-	DB c_fetch_tok
-	DB two_star_tok
-	DB plus_tok
-	DB fetch_tok
+	DT c_fetch
+	DT two_star
+	DT plus
+	DT fetch
 	; KEYQ-S C@ 1+ 7 AND KEYQ-S C! \ Increment KEYQ-S (mod 8)
 	DX keyq_s-2
-	DB c_fetch_tok
-	DB one_plus_tok
-	DB c_literal_tok
+	DT c_fetch
+	DT one_plus
+	DT c_literal
 	DB 7
-	DB and_tok
+	DT and
 	DX keyq_s-2
-	DB c_store_tok
+	DT c_store
 	; ;
-	DB exit_tok
+	DT exit
 
 
 	HEADER until_raw, "(UNTIL)", 0
@@ -1852,17 +1852,17 @@ equals:
 	HEADER less_than_or_equal, "<=", 0
 	DW colon_code
 less_than_or_equal:
-	DB greater_than_tok
-	DB invert_tok
-	DB exit_tok
+	DT greater_than
+	DT invert
+	DT exit
 
 
 	HEADER greater_than_or_equal, ">=", 0
 	DW colon_code
 greater_than_or_equal:
-	DB less_than_tok
-	DB invert_tok
-	DB exit_tok
+	DT less_than
+	DT invert
+	DT exit
 
 
 	; CODE 2>R
@@ -1896,34 +1896,34 @@ kshift_state:
 kscan:
 	; \ Get state of shift keys for high byte of event
 	; $FEFE P@ 1 AND  $7FFE P@ 2 AND  OR  8 LSHIFT  KSHIFT-STATE !
-	DB literal_raw_tok
+	DT literal_raw
 	DW 0xFEFE
 	DX p_fetch-2
-	DB one_literal_tok
-	DB and_tok
-	DB literal_raw_tok
+	DT one_literal
+	DT and
+	DT literal_raw
 	DW 0x7FFE
 	DX p_fetch-2
-	DB c_literal_tok
+	DT c_literal
 	DB 2
-	DB and_tok
-	DB or_tok
-	DB c_literal_tok
+	DT and
+	DT or
+	DT c_literal
 	DB 8
-	DB lshift_tok
+	DT lshift
 	DX kshift_state
 	; \ Call per-row word
 	; 8 0 DO I KSCAN-ROW LOOP ;
-	DB c_literal_tok
+	DT c_literal
 	DB 8
-	DB zero_literal_tok
-	DB two_to_r_tok
+	DT zero_literal
+	DT two_to_r
 .do:
-	DB r_fetch_tok
+	DT r_fetch
 	DX kscan_row-2
-	DB loop_raw_tok
+	DT loop_raw
 	DB .do-$+256
-	DB exit_tok
+	DT exit
 
 
 	; ( n ) : KSCAN-ROW \ Scan+update a given half-row
@@ -1932,30 +1932,30 @@ kscan:
 kscan_row:
 	; \ Read row state
 	; ( n ) 1  OVER LSHIFT  INVERT  8 LSHIFT ULA OR  P@  $1F AND
-	DB one_literal_tok
-	DB over_tok
-	DB lshift_tok
-	DB invert_tok
-	DB c_literal_tok
+	DT one_literal
+	DT over
+	DT lshift
+	DT invert
+	DT c_literal
 	DB 8
-	DB lshift_tok
+	DT lshift
 	DX ula-2
-	DB or_tok
+	DT or
 	DX p_fetch-2
-	DB c_literal_tok
+	DT c_literal
 	DB 0x1F
-	DB and_tok
+	DT and
 	; \ Calculate state address
 	; ( n state ) OVER CHARS KSTATE +
-	DB over_tok
+	DT over
 	DX kstate-2
-	DB plus_tok
+	DT plus
 	; \ Update when state changes
 	; ( n state addr ) 2DUP C@ = IF
-	DB two_dup_tok
-	DB c_fetch_tok
-	DB equals_tok
-	DB if_raw_tok
+	DT two_dup
+	DT c_fetch
+	DT equals
+	DT if_raw
 	DB .then-$-1
 	; THEN
 .then:

@@ -2,13 +2,32 @@
 
 ; ZENV - bootstrapping a Forth system
 
-	MACRO DX ___addr
-	DB (___addr) >> 8, (___addr) & 0xFF
-	ENDM
-
-
 NARROW_FONT: EQU 0
-CHECKED: EQU 1
+CHECKED: EQU 0
+TOKENIZED: EQU 0
+
+	IF TOKENIZED
+
+		MACRO DX ___addr
+		DB (___addr) >> 8, (___addr) & 0xFF
+		ENDM
+
+		MACRO DT ___sym
+		DB ___sym_tok
+		ENDM
+
+	ELSE
+
+		MACRO DX ___addr
+		DW ___addr
+		ENDM
+
+		MACRO DT ___sym
+		DW (___sym)-2
+		ENDM
+
+	ENDIF
+
 	IF NARROW_FONT
 t_width: EQU 64
 	ELSE
@@ -131,6 +150,8 @@ interrupt:
 	DW 0
 
 
+	IF TOKENIZED ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 next:
 	LD A, (IY+0)
 	INC IY
@@ -161,6 +182,22 @@ next:
 	LD L, (IY+0)
 	INC IY
 	JR .next__got_code_ptr
+
+	ELSE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+next:
+	LD L, (IY+0)
+	LD H, (IY+1)
+	INC IY
+	INC IY
+	LD E, (HL)
+	INC HL
+	LD D, (HL)
+	INC HL
+	EX DE, HL
+	JP (HL)
+
+	ENDIF ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
 colon_code:
@@ -195,14 +232,14 @@ do_does:
 constant_code:
 constant_does:
 	JP do_does
-	DB fetch_tok
-	DB exit_tok
+	DT fetch
+	DT exit
 
 
 two_constant_does:
 	JP do_does
 	DX two_fetch-2
-	DB exit_tok
+	DT exit
 
 
 create_code:
@@ -280,13 +317,12 @@ dat_holds_2_ret_room_2:
 dat_room_1_ret_holds_1:
 	RET
 
-	DW $+2
-hang:
-	JR $
 
+	IF TOKENIZED
 tokens:
 	INCLUDE "tokens.asm"
 	DS tokens+128*2 - $
+	ENDIF
 
 
 	IF NARROW_FONT
@@ -294,6 +330,7 @@ tokens:
 	ELSE
 font: EQU 0x3D00
 	ENDIF
+
 
 dictionary_start:
 	INCLUDE "words.asm"
