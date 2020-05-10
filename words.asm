@@ -1535,7 +1535,7 @@ halt_:
 
 
 	; : D+! ( n addr -- ) \ double in addr incremented by 2
-	HEADER d_plus_store, "D1+!", 0
+	HEADER d_plus_store, "D+!", 0
 	DW colon_code
 d_plus_store:
 	; DUP >R 2@ D+ R> 2! ;
