@@ -7,7 +7,14 @@
 	ENDM
 
 
+NARROW_FONT: EQU 0
 CHECKED: EQU 1
+	IF NARROW_FONT
+t_width: EQU 64
+	ELSE
+t_width: EQU 32
+	ENDIF
+t_attr_init: EQU 0x7
 load_addr: EQU 0x8000
 display_file_val: EQU 0x4000
 display_size_val: EQU 0x1800
@@ -281,7 +288,11 @@ tokens:
 	DS tokens+128*2 - $
 
 
+	IF NARROW_FONT
 	INCLUDE "font.asm"
+	ELSE
+font: EQU 0x3D00
+	ENDIF
 
 dictionary_start:
 	INCLUDE "words.asm"

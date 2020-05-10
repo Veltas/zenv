@@ -92,6 +92,8 @@ xor_tok: EQU ($-tokens)/2
 	DW xor-2
 lshift_tok: EQU ($-tokens)/2
 	DW lshift-2
+rshift_tok: EQU ($-tokens)/2
+	DW rshift-2
 two_drop_tok: EQU ($-tokens)/2
 	DW two_drop-2
 repeat_raw_tok: EQU ($-tokens)/2

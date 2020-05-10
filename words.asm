@@ -31,7 +31,7 @@ frames:
 	HEADER t_attr, "T-ATTR", 0
 	DW create_code
 t_attr:
-	DB 7
+	DB t_attr_init
 
 
 	HEADER t_col, "T-COL", 0
@@ -153,22 +153,7 @@ main:
 	; \ Display defined words
 	; WORDS CR
 	DX words-2
-	DX cr-2
 
-	; \ Print all printable characters
-	; 128 20 DO I EMIT LOOP CR CR ;
-	DB c_literal_tok
-	DB 128
-	DB c_literal_tok
-	DB 20
-	DB two_to_r_tok
-.do1:
-	DB r_fetch_tok
-	DX emit-2
-	DB loop_raw_tok
-	DB .do1-$+256
-	DX cr-2
-	DX cr-2
 	; \ Endlessly get input and print periods
 	; BEGIN EKEY DROP '.' EMIT 0 UNTIL
 .begin:
@@ -296,6 +281,9 @@ emit:
 	IF CHECKED
 		CALL dat_holds_1
 	ENDIF
+
+	IF NARROW_FONT ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 	; C is character
 	POP BC
 	LD A, C
@@ -407,6 +395,93 @@ emit:
 
 	JP next
 
+	ELSE ; !NARROW_FONT ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	POP BC
+	LD A, C
+	SUB 0x20
+	CP 0x7F - 0x20
+	JR NC, .non_print
+	CP 0x60 - 0x20
+	JR Z, .backtick
+	ADD A, A
+	LD L, A
+	LD H, 0
+	ADD HL, HL
+	ADD HL, HL
+	LD BC, font
+	ADD HL, BC
+	; DE = glyph address
+	EX DE, HL
+.print_glyph:
+	LD A, (t_col)
+	CP 32
+	JR NC, .next_line
+	LD C, A
+	LD B, 0
+.next_line_done:
+	LD A, (t_row)
+	LD H, A
+	AND 0x7
+	RRCA
+	RRCA
+	RRCA
+	LD L, A
+	LD A, H
+	AND 0x18
+	OR 0x40
+	LD H, A
+	ADD HL, BC
+	LD B, 8
+.draw_loop:
+	LD A, (DE)
+	LD (HL), A
+	INC DE
+	INC H
+	DJNZ .draw_loop
+	LD HL, t_col
+	INC (HL)
+	JP next
+
+.next_line:
+	PUSH DE
+	LD DE, cr
+	LD HL, colon_code
+	CALL asm_call
+	POP DE
+	LD BC, 0
+	JR .next_line_done
+
+.non_print:
+	CP 0x7F - 0x20
+	JR Z, .gbp
+
+	CP 0x20 - 0x20
+	LD DE, cr
+	LD HL, colon_code
+	CALL Z, asm_call
+
+	JP next
+
+.gbp:
+	LD DE, font + (0x60-0x20)*8
+	JR .print_glyph
+.backtick:
+	LD DE, .backtick_font
+	JR .print_glyph
+
+.backtick_font:
+	DB %00000000
+	DB %00010000
+	DB %00001000
+	DB %00000000
+	DB %00000000
+	DB %00000000
+	DB %00000000
+	DB %00000000
+
+	ENDIF ; NARROW_FONT or not ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 
 	HEADER bye, "BYE", 0
 	DW $ + 2
@@ -428,22 +503,50 @@ store:
 	JP next
 
 
+	; \ Set border to attr
+	; ( attr ) : BRDR!
+	HEADER brdr_store, "BRDR!", 0
+	DW colon_code
+brdr_store:
+	; 7 AND  ULA P@  0xF8 AND  OR  ULA P! ;
+	DB c_literal_tok
+	DB 7
+	DB and_tok
+	DX ula-2
+	DX p_fetch-2
+	DB c_literal_tok
+	DB 0xF8
+	DB and_tok
+	DB or_tok
+	DX ula-2
+	DX p_store-2
+	DB exit_tok
+
+
+	; \ Clear screen, reset terminal to top-left
 	; : PAGE
 	HEADER page, "PAGE", 0
 	DW colon_code
 page:
-	; 0 T-COL C!
+	; \ Match border to T-ATTR
+	; T-ATTR C@  3 RSHIFT  BRDR!
+	DX t_attr-2
+	DB c_fetch_tok
+	DB c_literal_tok
+	DB 3
+	DB rshift_tok
+	DX brdr_store-2
+	; \ Reset terminal col/row
+	; 0 0 AT-XY
 	DB zero_literal_tok
-	DX t_col-2
-	DB c_store_tok
-	; 0 T-ROW C!
 	DB zero_literal_tok
-	DX t_row-2
-	DB c_store_tok
+	DX at_xy-2
+	; \ Erase bitmap
 	; DISPLAY-FILE DISPLAY-SIZE ERASE
 	DX display_file-2
 	DX display_size-2
 	DX erase-2
+	; \ Set attr region to current T-ATTR
 	; ATTR-FILE ATTR-SIZE T-ATTR C@ FILL
 	DX attr_file-2
 	DX attr_size-2
@@ -1534,7 +1637,7 @@ at_xy:
 	; ( x ) 0 63 CLAMP T-COL C!
 	DB zero_literal_tok
 	DB c_literal_tok
-	DB 63
+	DB t_width-1
 	DX clamp-2
 	DX t_col-2
 	DB c_store_tok
@@ -1863,6 +1966,33 @@ lshift:
 	LD B, E
 .loop:
 	ADD HL, HL
+	DJNZ .loop
+.finish:
+	PUSH HL
+	JP next
+.zero:
+	LD HL, 0
+	JR .finish
+
+
+	; CODE RSHIFT ( x u -- x>>u )
+	HEADER rshift, "RSHIFT", 0
+	DW $ + 2
+rshift:
+	IF CHECKED
+		CALL dat_holds_2
+	ENDIF
+	POP DE
+	POP HL
+	XOR A
+	OR E
+	JR Z, .finish
+	CP 16
+	JR NC, .zero
+	LD B, E
+.loop:
+	SRL H
+	RR L
 	DJNZ .loop
 .finish:
 	PUSH HL
