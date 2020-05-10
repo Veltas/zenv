@@ -1534,16 +1534,45 @@ halt_:
 	JP next
 
 
-	; : D+! ( d addr -- ) \ double in addr incremented by d
+	HEADER tuck, "TUCK", 0
+	DW $ + 2
+tuck:
+	IF CHECKED
+		CALL dat_holds_2_room_1
+	ENDIF
+	POP BC
+	POP DE
+	PUSH BC
+	PUSH DE
+	PUSH BC
+	JP next
+
+
+	HEADER tuck2, "TUCK2", 0
+	DW $ + 2
+tuck2:
+	IF CHECKED
+		CALL dat_holds_3_room_1
+	ENDIF
+	POP BC
+	POP DE
+	POP HL
+	PUSH BC
+	PUSH HL
+	PUSH DE
+	PUSH BC
+	JP next
+
+
+	; ( d addr ) : D+! \ double in addr incremented by d
 	HEADER d_plus_store, "D+!", 0
 	DW colon_code
 d_plus_store:
-	; DUP >R 2@ D+ R> 2! ;
-	DB dup_tok
-	DB to_r_tok
+	; TUCK2 2@ D+ ROT 2! ;
+	DX tuck2-2
 	DX two_fetch-2
 	DX d_plus-2
-	DB r_from_tok
+	DB rot_tok
 	DX two_store-2
 	DB exit_tok
 

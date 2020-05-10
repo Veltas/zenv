@@ -263,20 +263,21 @@ dat_room_0:
 dat_room_1:
 dat_room_2:
 dat_holds_1:
-dat_holds_1_room_1:
-dat_holds_2_room_1:
-dat_holds_1_ret_room_1:
-dat_holds_2_ret_room_2:
-dat_room_1_ret_holds_1:
 dat_holds_2:
-dat_holds_2_room_2:
 dat_holds_3:
 dat_holds_4:
+dat_holds_1_room_1:
+dat_holds_2_room_1:
+dat_holds_3_room_1:
+dat_holds_2_room_2:
 dat_holds_4_room_2:
 ret_room_1:
 ret_room_2:
 ret_holds_1:
 ret_holds_2:
+dat_holds_1_ret_room_1:
+dat_holds_2_ret_room_2:
+dat_room_1_ret_holds_1:
 	RET
 
 	DW $+2
