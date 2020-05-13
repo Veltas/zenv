@@ -87,8 +87,8 @@ int:
 	DW 1
 	DX frames-2
 	DX d_plus_store-2
-	; \ KSCAN \ TODO
-;	DX kscan-2
+	; \ KSCAN
+	DX kscan-2
 	; ;
 	DT exit
 
@@ -1220,6 +1220,21 @@ over:
 	JP next
 
 
+	HEADER over_two, "OVER2", 0
+	DW $ + 2
+over_two:
+	IF CHECKED
+		CALL dat_holds_3_room_1
+	ENDIF
+	LD HL, 4
+	ADD HL, SP
+	LD E, (HL)
+	INC HL
+	LD D, (HL)
+	PUSH DE
+	JP next
+
+
 	HEADER reset_stacks, "RESET-STACKS", 0
 	DW $ + 2
 reset_stacks:
@@ -1890,20 +1905,175 @@ kshift_state:
 	DW 0
 
 
+	; \ Sample and return half-row state
+	; : KSAMP-ROW ( n -- sample )
+	HEADER ksamp_row, "KSAMP-ROW", 0
+	DW colon_code
+ksamp_row:
+	; 1 SWAP LSHIFT  INVERT  8 LSHIFT  ULA OR
+	DT one_literal
+	DT swap
+	DT lshift
+	DT invert
+	DT c_literal
+	DB 8
+	DT lshift
+	DX ula-2
+	DT or
+	; ( row-addr ) P@ INVERT  $1F AND ;
+	DX p_fetch-2
+	DT invert
+	DT c_literal
+	DB 0x1F
+	DT and
+	DT exit
+
+
+	; : NEW-EKEY ( row i -- )
+	HEADER new_ekey, "NEW-EKEY", 0
+	DW colon_code
+new_ekey:
+	; \ Calculate 'next' end index
+	; KEYQ-E C@ 1+ 7 AND
+	DX keyq_e-2
+	DT c_fetch
+	DT one_plus
+	DT c_literal
+	DB 7
+	DT and
+	; \ Do nothing if queue is full
+	; ( row i new-end )
+	; DUP  KEYQ-S C@  =  IF DROP 2DROP EXIT THEN
+	DT dup
+	DX keyq_s-2
+	DT c_fetch
+	DT equals
+	DT if_raw
+	DB .then-$-1
+	DT drop
+	DT two_drop
+	DT exit
+.then:
+	; \ Update end
+	; DUP KEYQ-E C!
+	DT dup
+	DX keyq_e-2
+	DT c_store
+	; \ Calculate symbol table index OR'd with shift state
+	; -ROT
+	DT minus_rot
+	; ( new-end row i )
+	; 4 SWAP -  3 LSHIFT  SWAP
+	DT c_literal
+	DB 4
+	DT swap
+	DT minus
+	DT c_literal
+	DB 3
+	DT lshift
+	DT swap
+	; ( new-end 8*[4-i] row )
+	; 7 SWAP -  +  KSHIFT-STATE @  OR
+	DT c_literal
+	DB 7
+	DT swap
+	DT minus
+	DT plus
+	DX kshift_state-2
+	DT fetch
+	DT or
+	; \ Store new code in queue
+	; ( new-end new-val )
+	; SWAP  CELLS KEYQ +  ! ;
+	DT swap
+	DT two_star
+	DX keyq-2
+	DT plus
+	DT store
+	DT exit
+
+
+	; \ Scan and update a given half-row
+	; : KSCAN-ROW ( n -- )
+	HEADER kscan_row, "KSCAN-ROW", 0
+	DW colon_code
+kscan_row:
+	; \ Sample half-row state
+	; DUP KSAMP-ROW
+	DT dup
+	DX ksamp_row-2
+	; \ Get saved state
+	; ( n samp )
+	; OVER CHARS KSTATE + C@
+	DT over
+	DX kstate-2
+	DT plus
+	DT c_fetch
+	; \ Update if state changed
+	; ( n samp saved )
+	; 2DUP = IF  DROP 2DROP EXIT  THEN
+	DT two_dup
+	DT equals
+	DT if_raw
+	DB .then1-$-1
+	DT drop
+	DT two_drop
+	DT exit
+.then1:
+	; \ Loop over bits
+	; 5 0 DO
+	DT c_literal
+	DB 5
+	DT zero_literal
+	DT two_to_r
+.do:
+		; \ If bit changes and is now set ...
+		; 2DUP INVERT AND I BIT  IF
+		DT two_dup
+		DT invert
+		DT and
+		DT r_fetch
+		DX bit_-2
+		DT if_raw
+		DB .then2-$-1
+			; \ Add event to queue
+			; OVER2 I NEW-EKEY
+			DX over_two-2
+			DT r_fetch
+			DX new_ekey-2
+		; THEN
+.then2:
+	; LOOP
+	DT loop_raw
+	DB .do-$+256
+	; \ Update state
+	; DROP SWAP
+	DT drop
+	DT swap
+	; ( samp n )
+	; CHARS KSTATE +  C! ;
+	DX kstate-2
+	DT plus
+	DT c_store
+	DT exit
+
+
 	; : KSCAN \ Update keyboard state
 	HEADER kscan, "KSCAN", 0
 	DW colon_code
 kscan:
 	; \ Get state of shift keys for high byte of event
-	; $FEFE P@ 1 AND  $7FFE P@ 2 AND  OR  8 LSHIFT  KSHIFT-STATE !
+	; $FEFE P@ INVERT 1 AND  $7FFE P@ INVERT 2 AND  OR  8 LSHIFT  KSHIFT-STATE !
 	DT literal_raw
 	DW 0xFEFE
 	DX p_fetch-2
+	DT invert
 	DT one_literal
 	DT and
 	DT literal_raw
 	DW 0x7FFE
 	DX p_fetch-2
+	DT invert
 	DT c_literal
 	DB 2
 	DT and
@@ -1911,7 +2081,8 @@ kscan:
 	DT c_literal
 	DB 8
 	DT lshift
-	DX kshift_state
+	DX kshift_state-2
+	DT store
 	; \ Call per-row word
 	; 8 0 DO I KSCAN-ROW LOOP ;
 	DT c_literal
@@ -1924,41 +2095,6 @@ kscan:
 	DT loop_raw
 	DB .do-$+256
 	DT exit
-
-
-	; ( n ) : KSCAN-ROW \ Scan+update a given half-row
-	HEADER kscan_row, "KSCAN-ROW", 0
-	DW colon_code
-kscan_row:
-	; \ Read row state
-	; ( n ) 1  OVER LSHIFT  INVERT  8 LSHIFT ULA OR  P@  $1F AND
-	DT one_literal
-	DT over
-	DT lshift
-	DT invert
-	DT c_literal
-	DB 8
-	DT lshift
-	DX ula-2
-	DT or
-	DX p_fetch-2
-	DT c_literal
-	DB 0x1F
-	DT and
-	; \ Calculate state address
-	; ( n state ) OVER CHARS KSTATE +
-	DT over
-	DX kstate-2
-	DT plus
-	; \ Update when state changes
-	; ( n state addr ) 2DUP C@ = IF
-	DT two_dup
-	DT c_fetch
-	DT equals
-	DT if_raw
-	DB .then-$-1
-	; THEN
-.then:
 
 
 	; \ Stores scanned key bits from the last scan
@@ -2031,6 +2167,18 @@ rshift:
 	JR .finish
 
 
+	; : BIT ( x n -- x&(1<<n) ) \ Mask all but nth bit of x
+	HEADER bit_, "BIT", 0
+	DW colon_code
+bit_:
+	; 1 SWAP LSHIFT AND ;
+	DT one_literal
+	DT swap
+	DT lshift
+	DT and
+	DT exit
+
+
 repeat_wait_init: EQU 45  ; 0.9s
 repeat_repeat_init: EQU 5 ; 0.1s
 	; Used to time waiting for repeats and repeating, cleared on every new
@@ -2038,46 +2186,9 @@ repeat_repeat_init: EQU 5 ; 0.1s
 repeat_timer:
 	DB 0
 
-unshifted_key_map:
-	; Port 0xFEFE
-	DB 0x80, 'z', 'x', 'c', 'v'
-	; Port 0xFDFE
-	DB 'a', 's', 'd', 'f', 'g'
-	; Port 0xFBFE
-	DB 'q', 'w', 'e', 'r', 't'
-	; Port 0xF7FE
-	DB '1', '2', '3', '4', '5'
-	; Port 0xEFFE
-	DB '0', '9', '8', '7', '6'
-	; Port 0xDFFE
-	DB 'p', 'o', 'i', 'u', 'y'
-	; Port 0xBFFE
-	DB '\n', 'l', 'k', 'j', 'h'
-	; Port 0x7FFE
-	DB ' ', 0x90, 'm', 'n', 'b'
 
 key_up:        EQU 0x11 ; ASCII DC1
 key_left:      EQU 0x12 ; ASCII DC2
 key_down:      EQU 0x13 ; ASCII DC3
 key_right:     EQU 0x14 ; ASCII DC4
 key_caps_lock: EQU 0x1C ; ASCII File separator
-
-caps_key_map:
-	DB 0x80, 'Z', 'X', 'C', 'V'
-	DB 'A', 'S', 'D', 'F', 'G'
-	DB 'Q', 'W', 'E', 'R', 'T'
-	DB '1', key_caps_lock, '3', '4', key_left
-	DB '\b', '9', key_right, key_up, key_down
-	DB 'P', 'O', 'I', 'U', 'Y'
-	DB '\n', 'L', 'K', 'J', 'H'
-	DB ' ', 0x90, 'M', 'N', 'B'
-
-symb_key_map:
-	DB 0x80, 'z', 'x', 'c', 'v'
-	DB 'a', 's', 'd', 'f', 'g'
-	DB 'q', 'w', 'e', 'r', 't'
-	DB '1', '2', '3', '4', '5'
-	DB '0', '9', '8', '7', '6'
-	DB 'p', 'o', 'i', 'u', 'y'
-	DB '\n', 'l', 'k', 'j', 'h'
-	DB ' ', 0x90, 'm', 'n', 'b'
