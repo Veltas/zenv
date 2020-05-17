@@ -33,7 +33,7 @@ t_width: EQU 64
 	ELSE
 t_width: EQU 32
 	ENDIF
-t_attr_init: EQU 0x7
+t_attr_init: EQU (0x7 << 3)
 load_addr: EQU 0x8000
 display_file_val: EQU 0x4000
 display_size_val: EQU 0x1800

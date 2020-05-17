@@ -87,7 +87,8 @@ int:
 	DW 1
 	DX frames-2
 	DX d_plus_store-2
-	; \ KSCAN
+	; \ update keyboard state
+	; KSCAN
 	DX kscan-2
 	; ;
 	DT exit
@@ -1898,203 +1899,11 @@ two_to_r:
 	JP next
 
 
-	; VARIABLE KSHIFT-STATE
+	; CREATE KSHIFT-STATE 0 C,
 	HEADER kshift_state, "KSHIFT-STATE", 0
 	DW create_code
 kshift_state:
-	DW 0
-
-
-	; \ Sample and return half-row state
-	; : KSAMP-ROW ( n -- sample )
-	HEADER ksamp_row, "KSAMP-ROW", 0
-	DW colon_code
-ksamp_row:
-	; 1 SWAP LSHIFT  INVERT  8 LSHIFT  ULA OR
-	DT one_literal
-	DT swap
-	DT lshift
-	DT invert
-	DT c_literal
-	DB 8
-	DT lshift
-	DX ula-2
-	DT or
-	; ( row-addr ) P@ INVERT  $1F AND ;
-	DX p_fetch-2
-	DT invert
-	DT c_literal
-	DB 0x1F
-	DT and
-	DT exit
-
-
-	; : NEW-EKEY ( row i -- )
-	HEADER new_ekey, "NEW-EKEY", 0
-	DW colon_code
-new_ekey:
-	; \ Calculate 'next' end index
-	; KEYQ-E C@ 1+ 7 AND
-	DX keyq_e-2
-	DT c_fetch
-	DT one_plus
-	DT c_literal
-	DB 7
-	DT and
-	; \ Do nothing if queue is full
-	; ( row i new-end )
-	; DUP  KEYQ-S C@  =  IF DROP 2DROP EXIT THEN
-	DT dup
-	DX keyq_s-2
-	DT c_fetch
-	DT equals
-	DT if_raw
-	DB .then-$-1
-	DT drop
-	DT two_drop
-	DT exit
-.then:
-	; \ Update end
-	; DUP KEYQ-E C!
-	DT dup
-	DX keyq_e-2
-	DT c_store
-	; \ Calculate symbol table index OR'd with shift state
-	; -ROT
-	DT minus_rot
-	; ( new-end row i )
-	; 4 SWAP -  3 LSHIFT  SWAP
-	DT c_literal
-	DB 4
-	DT swap
-	DT minus
-	DT c_literal
-	DB 3
-	DT lshift
-	DT swap
-	; ( new-end 8*[4-i] row )
-	; 7 SWAP -  +  KSHIFT-STATE @  OR
-	DT c_literal
-	DB 7
-	DT swap
-	DT minus
-	DT plus
-	DX kshift_state-2
-	DT fetch
-	DT or
-	; \ Store new code in queue
-	; ( new-end new-val )
-	; SWAP  CELLS KEYQ +  ! ;
-	DT swap
-	DT two_star
-	DX keyq-2
-	DT plus
-	DT store
-	DT exit
-
-
-	; \ Scan and update a given half-row
-	; : KSCAN-ROW ( n -- )
-	HEADER kscan_row, "KSCAN-ROW", 0
-	DW colon_code
-kscan_row:
-	; \ Sample half-row state
-	; DUP KSAMP-ROW
-	DT dup
-	DX ksamp_row-2
-	; \ Get saved state
-	; ( n samp )
-	; OVER CHARS KSTATE + C@
-	DT over
-	DX kstate-2
-	DT plus
-	DT c_fetch
-	; \ Update if state changed
-	; ( n samp saved )
-	; 2DUP = IF  DROP 2DROP EXIT  THEN
-	DT two_dup
-	DT equals
-	DT if_raw
-	DB .then1-$-1
-	DT drop
-	DT two_drop
-	DT exit
-.then1:
-	; \ Loop over bits
-	; 5 0 DO
-	DT c_literal
-	DB 5
-	DT zero_literal
-	DT two_to_r
-.do:
-		; \ If bit changes and is now set ...
-		; 2DUP INVERT AND I BIT  IF
-		DT two_dup
-		DT invert
-		DT and
-		DT r_fetch
-		DX bit_-2
-		DT if_raw
-		DB .then2-$-1
-			; \ Add event to queue
-			; OVER2 I NEW-EKEY
-			DX over_two-2
-			DT r_fetch
-			DX new_ekey-2
-		; THEN
-.then2:
-	; LOOP
-	DT loop_raw
-	DB .do-$+256
-	; \ Update state
-	; DROP SWAP
-	DT drop
-	DT swap
-	; ( samp n )
-	; CHARS KSTATE +  C! ;
-	DX kstate-2
-	DT plus
-	DT c_store
-	DT exit
-
-
-	; : KSCAN \ Update keyboard state
-	HEADER kscan, "KSCAN", 0
-	DW colon_code
-kscan:
-	; \ Get state of shift keys for high byte of event
-	; $FEFE P@ INVERT 1 AND  $7FFE P@ INVERT 2 AND  OR  8 LSHIFT  KSHIFT-STATE !
-	DT literal_raw
-	DW 0xFEFE
-	DX p_fetch-2
-	DT invert
-	DT one_literal
-	DT and
-	DT literal_raw
-	DW 0x7FFE
-	DX p_fetch-2
-	DT invert
-	DT c_literal
-	DB 2
-	DT and
-	DT or
-	DT c_literal
-	DB 8
-	DT lshift
-	DX kshift_state-2
-	DT store
-	; \ Call per-row word
-	; 8 0 DO I KSCAN-ROW LOOP ;
-	DT c_literal
-	DB 8
-	DT zero_literal
-	DT two_to_r
-.do:
-	DT r_fetch
-	DX kscan_row-2
-	DT loop_raw
-	DB .do-$+256
-	DT exit
+	DB 0
 
 
 	; \ Stores scanned key bits from the last scan
@@ -2112,6 +1921,132 @@ kstate:
 	DW create_code
 klast:
 	DB 0
+
+
+	; \ Update keyboard state
+	; CODE KSCAN ( -- )
+	HEADER kscan, "KSCAN", 0
+	DW $ + 2
+kscan:
+	PUSH IX
+	; If no keys are down, skip
+	LD BC, 0x00FE
+	IN A, (C)
+	CPL
+	JR NZ, .keys_down
+	; Clear kstate
+	LD L, A
+	LD H, A
+	LD (kstate), HL
+	LD (kstate+2), HL
+	LD (kstate+4), HL
+	LD (kstate+6), HL
+	POP IX
+	JP next
+
+.keys_down
+	; Update shift state
+	LD B, 0x7F
+	IN A, (C)
+	OR 0xFD
+	LD E, A
+	LD B, C
+	IN A, (C)
+	OR 0xFE
+	AND E
+	CPL
+	LD (kshift_state), A
+	; Loop over rows
+	; BC is 0xFEFE and will rotate to 7FFE
+	; E is counter
+	LD E, 7
+	; IX is KSTATE pointer
+	LD IX, kstate
+.loop:
+	; If row is empty, clear state and skip
+	IN A, (C)
+	CPL
+	JR NZ, .row_down
+	LD (IX+0), A
+.next_loop:
+	INC IX
+	RLC B
+	DEC E
+	JP P, .loop
+	POP IX
+	JP next
+.row_down:
+	; BC is port, E is counter, A is input, IX is kstate+E
+	; D is old state
+	LD D, (IX+0)
+	; H becomes input store, will rotate to get all needed bits
+	LD H, A
+	; If same as old state, skip
+	CP D
+	JR Z, .next_loop
+	; Store inverted old state in D
+	LD A, D
+	CPL
+	LD D, A
+	; L is counter for bit loop
+	LD L, 4
+.bit_loop:
+	; If new state is down and old state is up...
+	LD A, H
+	AND D
+	AND 1
+	JR Z, .bit_skip
+	; ... generate an EKEY
+	PUSH BC
+	PUSH DE
+	PUSH HL
+	; L = bit, E = row
+	; Is there space in the queue?
+	; C is keyq offset to store at
+	LD A, (keyq_s)
+	LD B, A
+	LD A, (keyq_e)
+	LD C, A
+	INC A
+	AND 7
+	CP B
+	JR Z, .inner_skip
+	; Save next keyq_e value
+	LD (keyq_e), A
+	; Make HL new EKEY value
+	LD A, L
+	ADD A, A
+	ADD A, A
+	ADD A, A
+	ADD A, E
+	LD L, A
+	LD A, (kshift_state)
+	LD H, A
+	; Store in queue
+	EX DE, HL
+	LD HL, keyq
+	LD B, 0
+	ADD HL, BC
+	ADD HL, BC
+	LD (HL), E
+	INC HL
+	LD (HL), D
+.inner_skip:
+	POP HL
+	POP DE
+	POP BC
+.bit_skip:
+	RRC H
+	RRC D
+	DEC L
+	JP P, .bit_loop
+	; All bits considered, save input state
+	LD A, H
+	RRCA
+	RRCA
+	RRCA
+	LD (IX+0), A
+	JR .next_loop
 
 
 	; CODE LSHIFT ( x u -- x<<u )
