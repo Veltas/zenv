@@ -144,6 +144,22 @@ words:
 	DT exit
 
 
+	; : KEY ( -- char )  \ Wait for next input char, using EKEY
+	HEADER key, "KEY", 0
+	DW colon_code
+key:
+	; \ Wait for a character key event
+	; 0 BEGIN DROP EKEY EKEY>CHAR UNTIL ;
+	DT zero_literal
+.begin:
+	DT drop
+	DX ekey-2
+	DX ekey_to_char-2
+	DT until_raw
+	DB .begin-$+256
+	DT exit
+
+
 	; : MAIN
 	HEADER main, "MAIN", 0
 	DW colon_code
@@ -155,17 +171,18 @@ main:
 	; WORDS CR
 	DX words-2
 
-	; \ Endlessly get input and print periods
-	; BEGIN EKEY DROP '.' EMIT 0 UNTIL
+	; \ Endlessly get input
+	; BEGIN
 .begin:
-	DX ekey-2
-	DT drop
-	DT c_literal
-	DB '.'
+		; \ Wait for key and print
+		; KEY EMIT
+	DX key-2
 	DX emit-2
+	; 0 UNTIL
 	DT zero_literal
 	DT until_raw
 	DB .begin-$+256
+	; ;
 	DT exit
 
 
@@ -187,6 +204,22 @@ one_literal:
 		CALL dat_room_1
 	ENDIF
 	LD BC, 1
+	PUSH BC
+	JP next
+
+
+	HEADER false, "FALSE", 0
+	DW zero_literal
+false:
+
+
+	HEADER true, "TRUE", 0
+	DW $ + 2
+true:
+	IF CHECKED
+		CALL dat_room_1
+	ENDIF
+	LD BC, -1
 	PUSH BC
 	JP next
 
@@ -457,7 +490,7 @@ emit:
 	CP 0x7F - 0x20
 	JR Z, .gbp
 
-	CP 0x20 - 0x20
+	CP 0x0A - 0x20
 	LD DE, cr
 	LD HL, colon_code
 	CALL Z, asm_call
@@ -813,12 +846,30 @@ question_dup:
 	JP next
 
 
-	HEADER abort, "ABORT", 0
+	HEADER tick_s_store, "'S!", 0
 	DW $ + 2
+tick_s_store:
+	POP HL
+	LD SP, HL
+	JP next
+
+
+	HEADER tick_r_store, "'R!", 0
+	DW $ + 2
+tick_r_store:
+	POP IX
+	JP next
+
+
+	; : ABORT ( -- ) \ Empty data stack and perform QUIT
+	HEADER abort, "ABORT", 0
+	DW colon_code
 abort:
-	LD SP, param_stack_top
-	LD IX, return_stack_top
-	JP quit
+	; S0 'S! QUIT ;
+	DX s_zero-2
+	DX tick_s_store-2
+	DX quit-2
+	DT exit
 
 
 	HEADER abs, "ABS", 0
@@ -1236,19 +1287,14 @@ over_two:
 	JP next
 
 
-	HEADER reset_stacks, "RESET-STACKS", 0
-	DW $ + 2
-reset_stacks:
-	LD IX, return_stack_top
-	LD SP, param_stack_top
-	JP next
-
-
+	; : QUIT ( -- ) \ Reset return stack then start interpretation
 	HEADER quit, "QUIT", 0
 	DW colon_code
 quit:
-	; : QUIT  BEGIN -' IF NUMBER ELSE EXECUTE THEN 0 UNTIL ;
-	DX reset_stacks-2
+	; R0 'R!
+	DX r_zero-2
+	DX tick_r_store-2
+	; BEGIN -' IF NUMBER ELSE EXECUTE THEN 0 UNTIL ;
 	; DW interpret-2
 	DT exit
 
@@ -1313,6 +1359,16 @@ tick_s:
 	JP next
 
 
+	HEADER tick_r, "'R", 0
+	DW $ + 2
+tick_r:
+	IF CHECKED
+		CALL dat_room_1
+	ENDIF
+	PUSH IX
+	JP next
+
+
 	HEADER rot, "ROT", 0
 	DW $ + 2
 rot:
@@ -1345,6 +1401,12 @@ swap:
 	DW constant_code
 s_zero:
 	DW param_stack_top
+
+
+	HEADER r_zero, "R0", 0
+	DW constant_code
+r_zero:
+	DW return_stack_top
 
 
 	HEADER to_in, ">IN", 0
@@ -1825,6 +1887,93 @@ ekey:
 	DT exit
 
 
+	; \ Address of the character key map in ROM
+	; $205 ROM-KMAP CONSTANT
+	HEADER rom_kmap, "ROM-KMAP", 0
+	DW constant_code
+rom_kmap:
+	DW 0x205
+
+
+	; EKEY>CHAR ( x -- x false | char true )
+	HEADER ekey_to_char, "EKEY>CHAR", 0
+	DW colon_code
+ekey_to_char:
+	; DUP $FF AND
+	DT dup
+	DT c_literal
+	DB 0xFF
+	DT and
+	; ( x low )
+	; \ Low-byte must be no more than 38 or 24 (symbol-shift)
+	; DUP 38 > OVER 24 = OR IF DROP FALSE EXIT THEN
+	DT dup
+	DT c_literal
+	DB 38
+	DT greater_than
+	DT over
+	DT c_literal
+	DB 24
+	DT equals
+	DT or
+	DT if_raw
+	DB .then1-$-1
+	DT drop
+	DT zero_literal
+	DT exit
+.then1:
+	; \ Get the character
+	; CHARS ROM-KMAP + C@
+	DX rom_kmap-2
+	DT plus
+	DT c_fetch
+	; ( x mapped-char )
+	; \ If the character is symbolic return now
+	; DUP 33 < IF
+	DT dup
+	DT c_literal
+	DB 33
+	DT less_than
+	DT if_raw
+	DB .then2-$-1
+		; \ Replace CR with LF character
+		; DUP 13 = IF DROP 10 THEN
+	DT dup
+	DT c_literal
+	DB 13
+	DT equals
+	DT if_raw
+	DB .then3-$-1
+	DT drop
+	DT c_literal
+	DB 10
+.then3:
+		; \ Return
+		; NIP TRUE EXIT
+	DT nip
+	DT true
+	DT exit
+	; THEN
+.then2:
+	; \ If caps shift inactive, convert to lowercase
+	; SWAP INVERT $100 AND IF $20 AND THEN
+	DT swap
+	DT invert
+	DT literal_raw
+	DW 0x100
+	DT and
+	DT if_raw
+	DB .then4-$-1
+	DT c_literal
+	DB 0x20
+	DT or
+.then4:
+	; ( char )
+	; TRUE ;
+	DT true
+	DT exit
+
+
 	HEADER until_raw, "(UNTIL)", 0
 	DW $ + 2
 until_raw:
@@ -1933,6 +2082,7 @@ kscan:
 	LD BC, 0x00FE
 	IN A, (C)
 	CPL
+	OR A
 	JR NZ, .keys_down
 	; Clear kstate
 	LD L, A

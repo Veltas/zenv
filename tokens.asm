@@ -8,6 +8,8 @@ zero_literal_tok: EQU ($-tokens)/2
 	DW zero_literal-2
 one_literal_tok: EQU ($-tokens)/2
 	DW one_literal-2
+true_tok: EQU ($-tokens)/2
+	DW true-2
 dup_tok: EQU ($-tokens)/2
 	DW dup-2
 question_dup_tok: EQU ($-tokens)/2
