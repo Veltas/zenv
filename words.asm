@@ -846,17 +846,17 @@ question_dup:
 	JP next
 
 
-	HEADER tick_s_store, "'S!", 0
+	HEADER sp_store, "SP!", 0
 	DW $ + 2
-tick_s_store:
+sp_store:
 	POP HL
 	LD SP, HL
 	JP next
 
 
-	HEADER tick_r_store, "'R!", 0
+	HEADER rp_store, "RP!", 0
 	DW $ + 2
-tick_r_store:
+rp_store:
 	POP IX
 	JP next
 
@@ -865,9 +865,9 @@ tick_r_store:
 	HEADER abort, "ABORT", 0
 	DW colon_code
 abort:
-	; S0 'S! QUIT ;
+	; S0 SP! QUIT ;
 	DX s_zero-2
-	DX tick_s_store-2
+	DX sp_store-2
 	DX quit-2
 	DT exit
 
@@ -1291,9 +1291,9 @@ over_two:
 	HEADER quit, "QUIT", 0
 	DW colon_code
 quit:
-	; R0 'R!
+	; R0 RP!
 	DX r_zero-2
-	DX tick_r_store-2
+	DX rp_store-2
 	; BEGIN -' IF NUMBER ELSE EXECUTE THEN 0 UNTIL ;
 	; DW interpret-2
 	DT exit
