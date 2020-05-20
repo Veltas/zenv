@@ -1436,6 +1436,26 @@ minus_rot:
 	JP next
 
 
+	HEADER u_less_than, "U<", 0
+	DW $ + 2
+u_less_than:
+	IF CHECKED
+		CALL dat_holds_2
+	ENDIF
+	POP DE
+	POP HL
+	OR A
+	SBC HL, DE
+	LD BC, 0
+	JR C, .lt
+	PUSH BC
+	JP next
+.lt:
+	DEC BC
+	PUSH BC
+	JP next
+
+
 	HEADER less_than, "<", 0
 	DW $ + 2
 less_than:
@@ -1839,6 +1859,26 @@ min:
 	DT exit
 
 
+	; : WITHIN ( n start end -- flags ) \ Is n within [start, end), or (end,
+	;                                   \ start] if end is less.
+	HEADER within, "WITHIN", 0
+	DW colon_code
+within:
+	; ( n start end )
+	; OVER -
+	DT over
+	DT minus
+	; ( n start range-length )
+	; -ROT - SWAP
+	DT minus_rot
+	DT minus
+	DT swap
+	; ( offset range-length )
+	; U< ;
+	DX u_less_than-2
+	DT exit
+
+
 	; : INVERT ( x -- y ) \ Invert all bits of x
 	HEADER invert, "INVERT", 0
 	DW $ + 2
@@ -1895,6 +1935,51 @@ rom_kmap:
 	DW 0x205
 
 
+rom_smap1_val: EQU 0x26A
+	; \ Address of one alphabet key map used with symbol shift
+	; $26A ROM-SMAP1 CONSTANT
+	HEADER rom_smap1, "ROM-SMAP1", 0
+	DW constant_code
+rom_smap1:
+	DW rom_smap1_val
+
+
+rom_smap2_val: EQU 0x246
+	; \ Address of lower priority alphabet key map used with symbol shift
+	; $246 ROM-SMAP2 CONSTANT
+	HEADER rom_smap2, "ROM-SMAP2", 0
+	DW constant_code
+rom_smap2:
+	DW rom_smap2_val
+
+
+	; \ Mapping of number keys to symbol shift characters
+	; CREATE NSYM-MAP
+	HEADER nsym_map, "NSYM-MAP", 0
+	DW create_code
+nsym_map:
+	; '_' C,
+	DB '_'
+	; '!' C,
+	DB '!'
+	; '@' C,
+	DB '@'
+	; '#' C,
+	DB '#'
+	; '$' C,
+	DB '$'
+	; '%' C,
+	DB '%'
+	; '&' C,
+	DB '&'
+	; ''' C,
+	DB "'"
+	; '(' C,
+	DB '('
+	; ')' C,
+	DB ')'
+
+
 	; EKEY>CHAR ( x -- x false | char true )
 	HEADER ekey_to_char, "EKEY>CHAR", 0
 	DW colon_code
@@ -1928,11 +2013,99 @@ ekey_to_char:
 	DT plus
 	DT c_fetch
 	; ( x mapped-char )
+	; \ If symbol shift active...
+	; OVER $200 AND IF
+	DT over
+	DT literal_raw
+	DW 0x200
+	DT and
+	DT if_raw
+	DB .then5-$-1
+		; \ If a number...
+		; DUP '0' [ '9' 1+ LITERAL ] WITHIN IF
+		DT dup
+		DT c_literal
+		DB '0'
+		DT c_literal
+		DB '9' + 1
+		DX within-2
+		DT if_raw
+		DB .then6-$-1
+			; \ Lookup from symbols number list
+			; CHARS [ NSYM-MAP '0' CHARS - LITERAL ] + C@
+			DT literal_raw
+			DW nsym_map-'0'
+			DT plus
+			DT c_fetch
+			; \ return
+			; NIP TRUE EXIT
+			DT nip
+			DT true
+			DT exit
+		; THEN
+.then6:
+		; \ If a letter...
+		; DUP 'A' [ 'Z' 1+ LITERAL ] WITHIN IF
+		DT dup
+		DT c_literal
+		DB 'A'
+		DT c_literal
+		DB 'Z' + 1
+		DX within-2
+		DT if_raw
+		DB .then7-$-1
+			; \ Try looking up from alphabet symbol map 1
+			; DUP CHARS [ ROM-SMAP1 'A' CHARS - LITERAL ] + C@
+			DT dup
+			DT literal_raw
+			DW rom_smap1_val - 'A'
+			DT plus
+			DT c_fetch
+			; ( x char sym1 )
+			; \ If larger than 0x7F try symbol map 2
+			; DUP $7F > IF
+			DT dup
+			DT c_literal
+			DB 0x7F
+			DT greater_than
+			DT if_raw
+			DB .then8-$-1
+				; DROP DUP CHARS [ ROM-SMAP2 'A' CHARS - LITERAL ] + C@
+				DT drop
+				DT dup
+				DT literal_raw
+				DW rom_smap2_val - 'A'
+				DT plus
+				DT c_fetch
+			; THEN
+			; ( x char sym )
+			; \ If still larger than 0x7F give up
+			; DUP $7F > IF 2DROP FALSE EXIT THEN
+			DT dup
+			DT c_literal
+			DB 0x7F
+			DT greater_than
+			DT if_raw
+			DB .then9-$-1
+			DT two_drop
+			DT zero_literal
+			DT exit
+.then9:
+			; -ROT 2DROP TRUE EXIT
+			DT minus_rot
+			DT two_drop
+			DT true
+			DT exit
+.then8:
+		; THEN
+.then7:
+	; THEN
+.then5:
 	; \ If the character is symbolic return now
-	; DUP 33 < IF
+	; DUP 'A' < IF
 	DT dup
 	DT c_literal
-	DB 33
+	DB 'A'
 	DT less_than
 	DT if_raw
 	DB .then2-$-1
