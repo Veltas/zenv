@@ -2054,6 +2054,34 @@ ekey_to_char:
 		DX within-2
 		DT if_raw
 		DB .then7-$-1
+			; \ Handle GBP separately
+			; DUP 'X' = IF 2DROP $7F TRUE EXIT THEN
+			DT dup
+			DT c_literal
+			DB 'X'
+			DT equals
+			DT if_raw
+			DB .then10-$-1
+			DT two_drop
+			DT c_literal
+			DB 0x7F
+			DT true
+			DT exit
+.then10:
+			; \ Handle '`' separately
+			; DUP 'I' = IF 2DROP '`' TRUE EXIT THEN
+			DT dup
+			DT c_literal
+			DB 'I'
+			DT equals
+			DT if_raw
+			DB .then11-$-1
+			DT two_drop
+			DT c_literal
+			DB '`'
+			DT true
+			DT exit
+.then11:
 			; \ Try looking up from alphabet symbol map 1
 			; DUP CHARS [ ROM-SMAP1 'A' CHARS - LITERAL ] + C@
 			DT dup
