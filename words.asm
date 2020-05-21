@@ -1980,198 +1980,96 @@ nsym_map:
 	DB ')'
 
 
+	; CREATE KMAP
+	HEADER kmap, "KMAP", 0
+	DW create_code
+kmap:
+	; \ Unshifted map
+	; 'b' C, 'h' C, 'y' C, '6' C, '5' C, 't' C, 'g' C, 'v' C,
+	DB 'b', 'h', 'y', '6', '5', 't', 'g', 'v'
+	; 'n' C, 'j' C, 'u' C, '7' C, '4' C, 'r' C, 'f' C, 'c' C,
+	DB 'n', 'j', 'u', '7', '4', 'r', 'f', 'c'
+	; 'm' C, 'k' C, 'i' C, '8' C, '3' C, 'e' C, 'd' C, 'x' C,
+	DB 'm', 'k', 'i', '8', '3', 'e', 'd', 'x'
+	; 0 C, 'l' C, 'o' C, '9' C, '2' C, 'w' C, 's' C, 'z' C,
+	DB 0, 'l', 'o', '9', '2', 'w', 's', 'z'
+	; ' ' C, $0A C, 'p' C, '0' C, '1' C, 'q' C, 'a' C, 0 C,
+	DB ' ', 0x0A, 'p', '0', '1', 'q', 'a', 0
+
+	; \ Caps shifted map
+	; 'B' C, 'H' C, 'Y' C, 0 C, 0 C, 'T' C, 'G' C, 'V' C,
+	DB 'B', 'H', 'Y', 0, 0, 'T', 'G', 'V'
+	; 'N' C, 'J' C, 'U' C, 0 C, 0 C, 'R' C, 'F' C, 'C' C,
+	DB 'N', 'J', 'U', 0, 0, 'R', 'F', 'C'
+	; 'M' C, 'K' C, 'I' C, 0 C, 0 C, 'E' C, 'D' C, 'X' C,
+	DB 'M', 'K', 'I', 0, 0, 'E', 'D', 'X'
+	; 0 C, 'L' C, 'O' C, 0 C, 0 C, 'W' C, 'S' C, 'Z' C,
+	DB 0, 'L', 'O', 0, 0, 'W', 'S', 'Z'
+	; $1B C, $0A C, 'P' C, $08 C, 0 C, 'Q' C, 'A' C, 0 C,
+	DB 0x1B, 0x0A, 'P', 0x08, 0, 'Q', 'A', 0
+
+	; \ Symbol shifted map
+	; '*' C, '^' C, '[' C, '&' C, '%' C, '>' C, '}' C, '/' C,
+	DB '*', '^', '[', '&', '%', '>', '}', '/'
+	; ',' C, '-' C, ']' C, ''' C, '$' C, '<' C, '{' C, '?' C,
+	DB ',', '-', ']', "'", '$', '<', '{', '?'
+	; '.' C, '+' C, '`' C, '(' C, '#' C, 0 C, '\' C, $7F C,
+	DB '.', '+', '`', '(', '#', 0, 0x5C, 0x7F
+	; 0 C, '=' C, ';' C, ')' C, '@' C, 0 C, '|' C, ':' C,
+	DB 0, '=', ';', ')', '@', 0, '|', ':'
+	; 0 C, $0A C, '"' C, '_' C, '!' C, 0 C, '~' C, 0 C,
+	DB 0, 0x0A, '"', '_', '!', 0, '~', 0
+
+
 	; EKEY>CHAR ( x -- x false | char true )
 	HEADER ekey_to_char, "EKEY>CHAR", 0
 	DW colon_code
 ekey_to_char:
+	; \ Get offset byte
 	; DUP $FF AND
 	DT dup
 	DT c_literal
 	DB 0xFF
 	DT and
-	; ( x low )
-	; \ Low-byte must be no more than 38 or 24 (symbol-shift)
-	; DUP 38 > OVER 24 = OR IF DROP FALSE EXIT THEN
-	DT dup
-	DT c_literal
-	DB 38
-	DT greater_than
-	DT over
-	DT c_literal
-	DB 24
-	DT equals
-	DT or
+	; \ If shift active...
+	; 2DUP <> IF
+	DT two_dup
+	DT not_equals
 	DT if_raw
 	DB .then1-$-1
-	DT drop
-	DT zero_literal
-	DT exit
+		; \ If symbol shift, add 80, otherwise 40
+		; OVER $200 AND  80 40 CHOOSE  +
+		DT over
+		DT literal_raw
+		DW 0x200
+		DT and
+		DT c_literal
+		DB 80
+		DT c_literal
+		DB 40
+		DX choose-2
+		DT plus
+	; THEN
 .then1:
-	; \ Get the character
-	; CHARS ROM-KMAP + C@
-	DX rom_kmap-2
+	; CHARS KMAP + C@ ?DUP IF
+	DX kmap-2
 	DT plus
 	DT c_fetch
-	; ( x mapped-char )
-	; \ If symbol shift active...
-	; OVER $200 AND IF
-	DT over
-	DT literal_raw
-	DW 0x200
-	DT and
+	DT question_dup
 	DT if_raw
-	DB .then5-$-1
-		; \ If a number...
-		; DUP '0' [ '9' 1+ LITERAL ] WITHIN IF
-		DT dup
-		DT c_literal
-		DB '0'
-		DT c_literal
-		DB '9' + 1
-		DX within-2
-		DT if_raw
-		DB .then6-$-1
-			; \ Lookup from symbols number list
-			; CHARS [ NSYM-MAP '0' CHARS - LITERAL ] + C@
-			DT literal_raw
-			DW nsym_map-'0'
-			DT plus
-			DT c_fetch
-			; \ return
-			; NIP TRUE EXIT
-			DT nip
-			DT true
-			DT exit
-		; THEN
-.then6:
-		; \ If a letter...
-		; DUP 'A' [ 'Z' 1+ LITERAL ] WITHIN IF
-		DT dup
-		DT c_literal
-		DB 'A'
-		DT c_literal
-		DB 'Z' + 1
-		DX within-2
-		DT if_raw
-		DB .then7-$-1
-			; \ Handle GBP separately
-			; DUP 'X' = IF 2DROP $7F TRUE EXIT THEN
-			DT dup
-			DT c_literal
-			DB 'X'
-			DT equals
-			DT if_raw
-			DB .then10-$-1
-			DT two_drop
-			DT c_literal
-			DB 0x7F
-			DT true
-			DT exit
-.then10:
-			; \ Handle '`' separately
-			; DUP 'I' = IF 2DROP '`' TRUE EXIT THEN
-			DT dup
-			DT c_literal
-			DB 'I'
-			DT equals
-			DT if_raw
-			DB .then11-$-1
-			DT two_drop
-			DT c_literal
-			DB '`'
-			DT true
-			DT exit
-.then11:
-			; \ Try looking up from alphabet symbol map 1
-			; DUP CHARS [ ROM-SMAP1 'A' CHARS - LITERAL ] + C@
-			DT dup
-			DT literal_raw
-			DW rom_smap1_val - 'A'
-			DT plus
-			DT c_fetch
-			; ( x char sym1 )
-			; \ If larger than 0x7F try symbol map 2
-			; DUP $7F > IF
-			DT dup
-			DT c_literal
-			DB 0x7F
-			DT greater_than
-			DT if_raw
-			DB .then8-$-1
-				; DROP DUP CHARS [ ROM-SMAP2 'A' CHARS - LITERAL ] + C@
-				DT drop
-				DT dup
-				DT literal_raw
-				DW rom_smap2_val - 'A'
-				DT plus
-				DT c_fetch
-			; THEN
-			; ( x char sym )
-			; \ If still larger than 0x7F give up
-			; DUP $7F > IF 2DROP FALSE EXIT THEN
-			DT dup
-			DT c_literal
-			DB 0x7F
-			DT greater_than
-			DT if_raw
-			DB .then9-$-1
-			DT two_drop
-			DT zero_literal
-			DT exit
-.then9:
-			; -ROT 2DROP TRUE EXIT
-			DT minus_rot
-			DT two_drop
-			DT true
-			DT exit
-.then8:
-		; THEN
-.then7:
-	; THEN
-.then5:
-	; \ If the character is symbolic return now
-	; DUP 'A' < IF
-	DT dup
-	DT c_literal
-	DB 'A'
-	DT less_than
-	DT if_raw
+	DB .else1-$-1
+		; NIP TRUE
+		DT nip
+		DT true
+	; ELSE
+	DT else_skip
 	DB .then2-$-1
-		; \ Replace CR with LF character
-		; DUP 13 = IF DROP 10 THEN
-	DT dup
-	DT c_literal
-	DB 13
-	DT equals
-	DT if_raw
-	DB .then3-$-1
-	DT drop
-	DT c_literal
-	DB 10
-.then3:
-		; \ Return
-		; NIP TRUE EXIT
-	DT nip
-	DT true
-	DT exit
+.else1:
+		; FALSE
+		DT false
 	; THEN
 .then2:
-	; \ If caps shift inactive, convert to lowercase
-	; SWAP INVERT $100 AND IF $20 AND THEN
-	DT swap
-	DT invert
-	DT literal_raw
-	DW 0x100
-	DT and
-	DT if_raw
-	DB .then4-$-1
-	DT c_literal
-	DB 0x20
-	DT or
-.then4:
-	; ( char )
-	; TRUE ;
-	DT true
+	; ;
 	DT exit
 
 
@@ -2462,6 +2360,20 @@ bit_:
 	DT swap
 	DT lshift
 	DT and
+	DT exit
+
+
+	; : CHOOSE ( flags x1 x2 -- x1|x2 ) \ Select x1 if flags true, o/w x2
+	HEADER choose, "CHOOSE", 0
+	DW colon_code
+choose:
+	; ROT IF SWAP THEN NIP ;
+	DT rot
+	DT if_raw
+	DB .then-$-1
+	DT swap
+.then:
+	DT nip
 	DT exit
 
 
