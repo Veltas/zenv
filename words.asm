@@ -2066,7 +2066,7 @@ ekey_to_char:
 	DB .then2-$-1
 .else1:
 		; FALSE
-		DT false
+		DT zero_literal
 	; THEN
 .then2:
 	; ;
