@@ -303,6 +303,7 @@ dat_holds_1:
 dat_holds_2:
 dat_holds_3:
 dat_holds_4:
+dat_holds_6:
 dat_holds_1_room_1:
 dat_holds_2_room_1:
 dat_holds_3_room_1:
@@ -315,13 +316,14 @@ ret_holds_2:
 dat_holds_1_ret_room_1:
 dat_holds_2_ret_room_2:
 dat_room_1_ret_holds_1:
+dat_room_2_ret_holds_2:
 	RET
 
 
 	IF TOKENIZED
 tokens:
 	INCLUDE "tokens.asm"
-	DS tokens+128*2 - $
+	;DS tokens+128*2 - $
 	ENDIF
 
 

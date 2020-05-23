@@ -168,7 +168,7 @@ main:
 	; PAGE
 	DX page-2
 	; \ Display defined words
-	; WORDS CR
+	; WORDS
 	DX words-2
 
 	; \ Endlessly get input
@@ -618,6 +618,86 @@ minus:
 	JP next
 
 
+	HEADER u_dollar_dot, "U$.", 0
+	DW $ + 2
+u_dollar_dot:
+	IF CHECKED
+		CALL dat_holds_1
+	ENDIF
+	POP BC
+	; D is non-zero if any digits have been output yet
+	LD D, 0
+	LD A, B
+	RRCA
+	RRCA
+	RRCA
+	RRCA
+	CALL .emit_nibble
+	LD A, B
+	CALL .emit_nibble
+	LD A, C
+	RRCA
+	RRCA
+	RRCA
+	RRCA
+	CALL .emit_nibble
+	LD A, C
+	INC D
+	CALL .emit_nibble
+	; Trailing space
+	LD HL, ' '
+	PUSH HL
+	LD HL, emit
+	CALL asm_call
+	JP next
+	; Emit the low nibble of A (if non-zero or D non-zero)
+.emit_nibble:
+	AND 0xF
+	JR NZ, .not_zero
+	; If D is 0 as well, skip digit
+	OR D
+	RET Z
+	XOR A
+.not_zero:
+	INC D
+	CP 0xA
+	JR C, .digit
+	ADD A, 'A'-'0'-0xA
+.digit:
+	ADD A, '0'
+	LD L, A
+	LD H, 0
+	PUSH BC
+	PUSH DE
+	PUSH HL
+	LD HL, emit
+	CALL asm_call
+	POP DE
+	POP BC
+	RET
+
+
+	; \ Display u with a trailing space
+	; : U. ( u -- )
+	HEADER u_dot, "U.", 0
+	DW colon_code
+u_dot:
+	; BASE @ 16 = IF U$. EXIT THEN
+	DX base-2
+	DT fetch
+	DT c_literal
+	DB 16
+	DT equals
+	DT if_raw
+	DB .then1-$-1
+	DX u_dollar_dot-2
+	DT exit
+.then1:
+	; \ TODO
+	; ;
+	DT exit
+
+
 	HEADER zero_equals, "0=", 0
 	DW $ + 2
 zero_equals:
@@ -971,6 +1051,12 @@ xor:
 	JP next
 
 
+	HEADER base, "BASE", 0
+	DW create_code
+base:
+	DW 10
+
+
 	HEADER bl, "BL", 0
 	DW constant_code
 bl:
@@ -1044,6 +1130,19 @@ count:
 	JP next
 
 
+	; \ Set BASE to 10
+	; : DECIMAL ( -- )
+	HEADER decimal, "DECIMAL", 0
+	DW colon_code
+decimal:
+	; 10 BASE ! ;
+	DT c_literal
+	DB 10
+	DX base-2
+	DT store
+	DT exit
+
+
 	HEADER depth, "DEPTH", 0
 	DW colon_code
 depth:
@@ -1074,6 +1173,19 @@ dup:
 	PUSH HL
 	PUSH HL
 	JP next
+
+
+	; \ Set BASE to 16
+	; : HEX ( -- )
+	HEADER hex, "HEX", 0
+	DW colon_code
+hex:
+	; 16 BASE ! ;
+	DT c_literal
+	DB 16
+	DX base-2
+	DT store
+	DT exit
 
 
 	; : MAX 2DUP < IF SWAP THEN DROP ;
@@ -2374,6 +2486,319 @@ choose:
 	DT swap
 .then:
 	DT nip
+	DT exit
+
+
+	; : 2OR ( d1 d2 -- d1|d2 ) \ OR of doubles
+	HEADER two_or, "2OR", 0
+	DW colon_code
+two_or:
+	; ROT OR -ROT OR SWAP ;
+	DT rot
+	DT or
+	DT minus_rot
+	DT or
+	DT swap
+	DT exit
+
+
+	; : NEG? ( n -- flags ) \ Is a number negative?
+	HEADER neg_question, "NEG?", 0
+	DW colon_code
+neg_question:
+	; $8000 AND 0<> ;
+	DT literal_raw
+	DW 0x8000
+	DT and
+	DT zero_not_equals
+	DT exit
+
+
+	; : DNEG? ( d -- flags ) \ Is a double integer negative?
+	HEADER dneg_question, "DNEG?", 0
+	DW colon_code
+dneg_question:
+	; NIP NEG? ;
+	DT nip
+	DX neg_question-2
+	DT exit
+
+
+	; CODE D2*
+	HEADER d_two_star, "D2*", 0
+	DW $ + 2
+d_two_star:
+	IF CHECKED
+		CALL dat_holds_2
+	ENDIF
+	POP BC
+	POP DE
+	SLA E
+	RL D
+	RL C
+	RL B
+	PUSH DE
+	PUSH BC
+	JP next
+
+
+	; CODE DU2/
+	HEADER du_two_slash, "DU2/", 0
+	DW $ + 2
+du_two_slash:
+	IF CHECKED
+		CALL dat_holds_2
+	ENDIF
+	POP BC
+	POP DE
+	SRL B
+	RR C
+	RR D
+	RR E
+	PUSH DE
+	PUSH BC
+	JP next
+
+
+	; CODE 2SWAP
+	HEADER two_swap, "2SWAP", 0
+	DW $ + 2
+two_swap:
+	IF CHECKED
+		CALL dat_holds_4
+	ENDIF
+	POP AF
+	POP BC
+	POP DE
+	POP HL
+	PUSH BC
+	PUSH AF
+	PUSH HL
+	PUSH DE
+	JP next
+
+
+	; : 2ROT ( d1 d2 d3 -- d2 d3 d1 )
+	HEADER two_rot, "2ROT", 0
+	DW colon_code
+two_rot:
+	; 2>R 2SWAP 2R> 2SWAP ;
+	DX two_to_r-2
+	DX two_swap-2
+	DX two_r_from-2
+	DX two_swap-2
+	DT exit
+
+
+	; : 2-ROT ( d1 d2 d3 -- d3 d1 d2 )
+	HEADER two_minus_rot, "2-ROT", 0
+	DW colon_code
+two_minus_rot:
+	; 2SWAP 2>R 2SWAP 2R> ;
+	DX two_swap-2
+	DX two_to_r-2
+	DX two_swap-2
+	DX two_r_from-2
+	DT exit
+
+
+	HEADER du_less_than, "DU<", 0
+	DW $ + 2
+du_less_than:
+	IF CHECKED
+		CALL dat_holds_4
+	ENDIF
+	POP BC
+	POP DE
+	POP HL
+	OR A
+	SBC HL, BC
+	JR Z, .equal
+	JR C, .true
+	LD HL, 0
+	EX (SP), HL
+	JP next
+.true:
+	LD HL, -1
+	EX (SP), HL
+	JP next
+.equal:
+	POP HL
+	OR A
+	SBC HL, DE
+	JR C, .true2
+	LD HL, 0
+	PUSH HL
+	JP next
+.true2:
+	LD HL, -1
+	PUSH HL
+	JP next
+
+
+	; : D<
+	HEADER d_less_than, "D<", 0
+	DW colon_code
+d_less_than:
+	; 2SWAP $80000000. D+ 2SWAP $80000000. D+ DU< ;
+	DX two_swap-2
+	DX two_literal_raw-2
+	DW 0x8000
+	DW 0
+	DX d_plus-2
+	DX two_swap-2
+	DX two_literal_raw-2
+	DW 0x8000
+	DW 0
+	DX d_plus-2
+	DX du_less_than-2
+	DT exit
+
+
+	; CODE D-
+	HEADER d_minus, "D-", 0
+	DW $+2
+d_minus:
+	IF CHECKED
+		CALL dat_holds_4
+	ENDIF
+	POP DE
+	POP BC
+	POP HL
+	OR A
+	SBC HL, DE
+	EX DE, HL
+	POP HL
+	SBC HL, BC
+	PUSH HL
+	PUSH DE
+	JP next
+
+
+	; CODE 2R>
+	HEADER two_r_from, "2R>", 0
+	DW $ + 2
+two_r_from:
+	IF CHECKED
+		CALL dat_room_2_ret_holds_2
+	ENDIF
+	LD E, (IX+0)
+	LD D, (IX+1)
+	LD C, (IX+2)
+	LD B, (IX+3)
+	PUSH BC
+	PUSH DE
+	LD BC, 4
+	ADD IX, BC
+	JP next
+
+
+	; : 2OVER2 ( d1 d2 d3 -- d1 d2 d3 d1 )
+	HEADER two_over_two, "2OVER2", 0
+	DW colon_code
+two_over_two:
+	; 'S 8 + 2@ ;
+	DX tick_s-2
+	DT c_literal
+	DB 8
+	DT plus
+	DX two_fetch-2
+	DT exit
+
+
+	; : D0=
+	HEADER d_zero_equals, "D0=", 0
+	DW colon_code
+d_zero_equals:
+	; OR 0= ;
+	DT or
+	DT zero_equals
+	DT exit
+
+
+	; \ Divide and produce remainder in double integers
+	; : DU/MOD ( ud1 ud2 -- ud3 ud4 ) \ Where ud1 is numerator, ud2 is
+	;                                 \ denominator, ud3 is result, ud4 is
+	;                                 \ remainder.
+	HEADER du_slash_mod, "DU/MOD", 0
+	DW colon_code
+du_slash_mod:
+	; \ Refuse to divide by 0
+	; \ TODO 2DUP D0= IF ABORT" Div by 0" THEN
+	; 1.
+	DX two_literal_raw-2
+	DW 0
+	DW 1
+	; ( rem div unit )
+	; \ Shift div and unit as much as possible without overflowing
+	; BEGIN 2OVER DNEG? INVERT WHILE
+.begin1:
+	DX two_over-2
+	DX dneg_question-2
+	DT invert
+	DT if_raw
+	DB .repeat1-$-1
+		; 2SWAP D2* 2SWAP D2*
+		DX two_swap-2
+		DX d_two_star-2
+		DX two_swap-2
+		DX d_two_star-2
+	; REPEAT
+	DT repeat_raw
+	DB .begin1-$+256
+.repeat1:
+
+	; 0. 2>R  2SWAP 2ROT
+	DT zero_literal
+	DT zero_literal
+	DT two_to_r
+	DX two_swap-2
+	DX two_rot-2
+	; ( unit div rem ) ( R:result )
+	; BEGIN
+.begin2:
+		; \ If remainder at least divisor, sub and OR unit to result
+		; 2OVER 2OVER 2SWAP DU< INVERT IF
+		DX two_over-2
+		DX two_over-2
+		DX two_swap-2
+		DX du_less_than-2
+		DT invert
+		DT if_raw
+		DB .then-$-1
+			; 2OVER D-
+			DX two_over-2
+			DX d_minus-2
+			; 2ROT 2DUP 2R> 2OR 2>R 2-ROT
+			DX two_rot-2
+			DX two_dup-2
+			DX two_r_from-2
+			DX two_or-2
+			DX two_to_r-2
+			DX two_minus_rot-2
+		; THEN
+.then:
+
+		; \ Shift right each step until divisor gone
+		; 2ROT DU2/ 2ROT DU2/ 2ROT
+		DX two_rot-2
+		DX du_two_slash-2
+		DX two_rot-2
+		DX du_two_slash-2
+		DX two_rot-2
+	; 2OVER2 D0= UNTIL
+	DX two_over_two-2
+	DX d_zero_equals-2
+	DT until_raw
+	DB .begin2-$+256
+
+	; \ Return result + remainder
+	; 2-ROT 2DROP 2DROP 2R> 2SWAP ;
+	DX two_minus_rot-2
+	DX two_drop-2
+	DX two_drop-2
+	DX two_r_from-2
+	DX two_swap-2
 	DT exit
 
 
