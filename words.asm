@@ -2502,25 +2502,13 @@ two_or:
 	DT exit
 
 
-	; : NEG? ( n -- flags ) \ Is a number negative?
-	HEADER neg_question, "NEG?", 0
+	; : D0< ( d -- flags ) \ Is a double integer negative?
+	HEADER d_zero_less, "D0<", 0
 	DW colon_code
-neg_question:
-	; $8000 AND 0<> ;
-	DT literal_raw
-	DW 0x8000
-	DT and
-	DT zero_not_equals
-	DT exit
-
-
-	; : DNEG? ( d -- flags ) \ Is a double integer negative?
-	HEADER dneg_question, "DNEG?", 0
-	DW colon_code
-dneg_question:
-	; NIP NEG? ;
+d_zero_less:
+	; NIP 0< ;
 	DT nip
-	DX neg_question-2
+	DX zero_less-2
 	DT exit
 
 
@@ -2725,35 +2713,47 @@ d_zero_equals:
 du_slash_mod:
 	; \ Refuse to divide by 0
 	; \ TODO 2DUP D0= IF ABORT" Div by 0" THEN
-	; 1.
+	; 1. 2-ROT
 	DX two_literal_raw-2
 	DW 0
 	DW 1
-	; ( rem div unit )
-	; \ Shift div and unit as much as possible without overflowing
-	; BEGIN 2OVER DNEG? INVERT WHILE
+	DX two_minus_rot-2
+	; ( rem den unit )
+	; \ Shift den and unit, while den smaller than rem,
+	; \ and until before den overflows.
+	; BEGIN 2OVER 2OVER 2SWAP DU< IF 2DUP D0< INVERT ELSE FALSE THEN WHILE
 .begin1:
 	DX two_over-2
-	DX dneg_question-2
+	DX two_over-2
+	DX two_swap-2
+	DX du_less_than-2
+	DT if_raw
+	DB .else-$-1
+	DX two_dup-2
+	DX d_zero_less-2
 	DT invert
+	DT else_skip
+	DB .then2-$-1
+.else:
+	DT zero_literal
+.then2:
 	DT if_raw
 	DB .repeat1-$-1
-		; 2SWAP D2* 2SWAP D2*
-		DX two_swap-2
+		; 2ROT D2* 2-ROT D2*
+		DX two_rot-2
 		DX d_two_star-2
-		DX two_swap-2
+		DX two_minus_rot-2
 		DX d_two_star-2
 	; REPEAT
 	DT repeat_raw
 	DB .begin1-$+256
 .repeat1:
 
-	; 0. 2>R  2SWAP 2ROT
+	; 0. 2>R  2SWAP
 	DT zero_literal
 	DT zero_literal
 	DT two_to_r
 	DX two_swap-2
-	DX two_rot-2
 	; ( unit div rem ) ( R:result )
 	; BEGIN
 .begin2:
