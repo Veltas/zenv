@@ -149,7 +149,7 @@ words:
 	DW colon_code
 key:
 	; \ Wait for a character key event
-	; 0 BEGIN DROP EKEY EKEY>CHAR UNTIL ;
+	; 0 BEGIN DROP EKEY EKEY>CHAR UNTIL CLICK ;
 	DT zero_literal
 .begin:
 	DT drop
@@ -157,6 +157,7 @@ key:
 	DX ekey_to_char-2
 	DT until_raw
 	DB .begin-$+256
+	DX click-2
 	DT exit
 
 
@@ -168,7 +169,7 @@ main:
 	; PAGE
 	DX page-2
 	; \ Display defined words
-	; WORDS
+	; \ WORDS
 	DX words-2
 
 	; \ Endlessly get input
@@ -2571,7 +2572,7 @@ two_swap:
 	DW colon_code
 two_rot:
 	; 2>R 2SWAP 2R> 2SWAP ;
-	DX two_to_r-2
+	DT two_to_r
 	DX two_swap-2
 	DX two_r_from-2
 	DX two_swap-2
@@ -2584,7 +2585,7 @@ two_rot:
 two_minus_rot:
 	; 2SWAP 2>R 2SWAP 2R> ;
 	DX two_swap-2
-	DX two_to_r-2
+	DT two_to_r
 	DX two_swap-2
 	DX two_r_from-2
 	DT exit
@@ -2774,7 +2775,7 @@ du_slash_mod:
 			DX two_dup-2
 			DX two_r_from-2
 			DX two_or-2
-			DX two_to_r-2
+			DT two_to_r
 			DX two_minus_rot-2
 		; THEN
 .then:
@@ -2799,6 +2800,99 @@ du_slash_mod:
 	DX two_drop-2
 	DX two_r_from-2
 	DX two_swap-2
+	DT exit
+
+
+	; : UM/MOD ( ud u1 -- u2 u3 ) \ Divide by u1, quo u2 rem u3
+	HEADER um_slash_mod, "UM/MOD", 0
+	DW colon_code
+um_slash_mod:
+	; 0 DU/MOD DROP NIP ;
+	DT zero_literal
+	DX du_slash_mod-2
+	DT drop
+	DT nip
+	DT exit
+
+
+	; CODE ITONE ( u1 u2 -- ) \ half-oscillations period
+	HEADER itone, "ITONE", 0
+	DW $ + 2
+itone:
+	IF CHECKED
+		CALL dat_holds_2
+	ENDIF
+	LD A, (t_attr)
+	RRCA
+	RRCA
+	RRCA
+	AND 7
+	POP DE
+	LD HL, 0
+	SBC HL, DE
+	; DE = period
+	EX DE, HL
+	POP BC
+	LD HL, 0
+	OR A
+	; HL = half-oscillations
+	SBC HL, BC
+	; B = OUT value
+	LD B, A
+	; Quit if HL = 0
+	LD A, L
+	OR A, H
+	JP Z, next
+	; Push period
+	PUSH DE
+	LD A, B
+.loop1_with_delay:
+	ADD A, 0
+	NOP
+.loop1:
+	OUT (ula_val), A
+	XOR 1<<4
+.loop2_with_delay:
+	ADD A, 0
+	NOP
+.loop2:
+	INC E
+	JR NZ, .loop2_with_delay
+	INC D
+	JR NZ, .loop2
+
+	POP DE
+	PUSH DE
+	INC L
+	JR NZ, .loop1_with_delay
+	INC H
+	JR NZ, .loop1
+
+	POP HL
+	JP next
+
+
+	; : TONE  ( len period -- ) \ Make an accurate tone, masking interrupts
+	HEADER tone, "TONE", 0
+	DW colon_code
+tone:
+	; DI ITONE EI ;
+	DX _di-2
+	DX itone-2
+	DX _ei-2
+	DT exit
+
+
+	; : CLICK ( -- ) \ Make a 'click' noise
+	HEADER click, "CLICK", 0
+	DW colon_code
+click:
+	; 4 30 ITONE ;
+	DT c_literal
+	DB 4
+	DT c_literal
+	DB 30
+	DX itone-2
 	DT exit
 
 
