@@ -177,8 +177,8 @@ main:
 .begin:
 		; \ Wait for key and print
 		; KEY EMIT
-	DX key-2
-	DX emit-2
+		DX key-2
+		DX emit-2
 	; 0 UNTIL
 	DT zero_literal
 	DT until_raw
