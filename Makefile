@@ -3,7 +3,9 @@ all: zenv.tap
 
 .PHONY: clean
 clean:
-	rm -f zenv.bin zenv.tap zenv.lst
+	rm -f \
+		zenv-code.bin zenv-syms.bin zenv.bin zenv.lst \
+		zenv.tap zenv.wav stereo.wav
 
 #zenv-unpadded.bin: zenv.asm
 zenv.bin: $(wildcard *.asm)
@@ -12,6 +14,13 @@ zenv.bin: $(wildcard *.asm)
 
 zenv.tap: zenv.bin
 	bin2tap -b -o $@ $<
+
+zenv.wav: zenv.tap
+	tape2wav $< $@
+
+# Stereo version for use with a stereo phone cable on the ZX Spectrum.
+stereo.wav: zenv.wav
+	ffmpeg -y -i $< -af "aeval=c=stereo:exprs=val(0)|-val(0)" $@
 
 # ROM-style version?
 #zenv.bin: zenv-unpadded.bin
