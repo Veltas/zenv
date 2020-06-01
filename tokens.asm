@@ -54,6 +54,10 @@ two_dup_tok: EQU ($-tokens)/2
 	DW two_dup-2
 nip_tok: EQU ($-tokens)/2
 	DW nip-2
+tuck_tok: EQU ($-tokens)/2
+	DW tuck-2
+zero_less_tok: EQU ($-tokens)/2
+	DW zero_less-2
 less_than_tok: EQU ($-tokens)/2
 	DW less_than-2
 greater_than_tok: EQU ($-tokens)/2
@@ -62,6 +66,8 @@ minus_rot_tok: EQU ($-tokens)/2
 	DW minus_rot-2
 drop_tok: EQU ($-tokens)/2
 	DW drop-2
+plus_store_tok: EQU ($-tokens)/2
+	DW plus_store-2
 c_plus_store_tok: EQU ($-tokens)/2
 	DW c_plus_store-2
 r_from_tok: EQU ($-tokens)/2

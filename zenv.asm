@@ -4,7 +4,7 @@
 
 NARROW_FONT: EQU 0
 CHECKED: EQU 0
-TOKENIZED: EQU 0
+TOKENIZED: EQU 1
 
 	IF TOKENIZED
 
@@ -43,6 +43,10 @@ ula_val: EQU 0xFE
 keyq_len_val: EQU 8
 symbols: EQU attr_file_val + attr_size_val
 symbols_size: EQU symbols + 3*1024
+	; Address of PAD
+pad_val: EQU 0xFB00
+	; Address WORD is stored in
+tick_word_val: EQU 0xFC00
 	; Address data stack starts at
 param_stack_top: EQU 0xFDF0
 param_stack_size: EQU 0xE0

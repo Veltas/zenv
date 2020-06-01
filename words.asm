@@ -7,6 +7,16 @@ h_:
 	DW h_init
 
 
+	; : HERE ( -- addr ) \ Get current address of dictionary end
+	HEADER here, "HERE", 0
+	DW colon_code
+here:
+	; H @ ;
+	DX h_-2
+	DT fetch
+	DT exit
+
+
 ; Points to most recently defined symbol
 	HEADER sym_last, "SYM-LAST", 0
 	DW create_code
@@ -68,6 +78,18 @@ attr_file:
 	DW constant_code
 attr_size:
 	DW attr_size_val
+
+
+	HEADER tick_word, "'WORD", 0
+	DW constant_code
+tick_word:
+	DW tick_word_val
+
+
+	HEADER pad, "PAD", 0
+	DW constant_code
+pad:
+	DW pad_val
 
 
 	HEADER tick_int, "'INT", 0
@@ -169,7 +191,7 @@ main:
 	; PAGE
 	DX page-2
 	; \ Display defined words
-	; \ WORDS
+	; WORDS
 	DX words-2
 
 	; \ Endlessly get input
@@ -538,6 +560,240 @@ store:
 	JP next
 
 
+	; Offset of current digit in 'WORD (pictured number buffer)
+	HEADER to_number_sign, ">#", 0
+	DW create_code
+to_number_sign:
+	DB 0
+
+
+	; \ Initialise pictured number buffer for processing
+	; : <# ( -- )
+	HEADER less_number_sign, "<#", 0
+	DW colon_code
+less_number_sign:
+	; 256 ># C! ;
+	DT literal_raw
+	DW 256
+	DX to_number_sign-2
+	DT c_store
+	DT exit
+
+
+	; \ Prefix pictured numeric string with given character
+	; : HOLD ( c -- )
+	HEADER hold, "HOLD", 0
+	DW colon_code
+hold:
+	; \ Decrement >#
+	; -1 ># C+!
+	DT literal_raw
+	DW -1
+	DX to_number_sign-2
+	DT c_plus_store
+	; \ Store character at (># + 'WORD)
+	; 'WORD ># C@ + C! ;
+	DX tick_word-2
+	DX to_number_sign-2
+	DT c_fetch
+	DT plus
+	DT c_store
+	DT exit
+
+
+	; \ Add a '-' character to the pictured numeric string if n less than 0
+	; : SIGN ( n -- )
+	HEADER sign, "SIGN", 0
+	DW colon_code
+sign:
+	; 0< IF '-' HOLD THEN ;
+	DT zero_less
+	DT if_raw
+	DB .then-$-1
+	DT c_literal
+	DB '-'
+	DX hold-2
+.then:
+	DT exit
+
+
+	; \ Convert a digit to its character representation
+	; : DIGIT ( n -- c )
+	HEADER digit, "DIGIT", 0
+	DW colon_code
+digit:
+	; DUP 9 > IF [ 'A' '0' - 10 - LITERAL ] + THEN
+	DT dup
+	DT c_literal
+	DB 9
+	DT greater_than
+	DT if_raw
+	DB .then-$-1
+	DT c_literal
+	DB 'A' - '0' - 10
+	DT plus
+.then:
+	; '0' + ;
+	DT c_literal
+	DB '0'
+	DT plus
+	DT exit
+
+
+	; \ Divide ud1 by BASE, quotient goes in ud2, remainder converted to
+	; \ digit and prefixed to pictured numeric output string.
+	; : # ( ud1 -- ud2 )
+	HEADER number_sign, "#", 0
+	DW colon_code
+number_sign:
+	; BASE @ 0  DU/MOD  DROP  DIGIT HOLD ;
+	DX base-2
+	DT fetch
+	DT zero_literal
+	DX du_slash_mod-2
+	DT drop
+	DX digit-2
+	DX hold-2
+	DT exit
+
+
+	; \ Drop double cell, get pictured numeric string
+	; : #> ( xd -- c-addr u )
+	HEADER number_sign_greater, "#>", 0
+	DW colon_code
+number_sign_greater:
+	; 2DROP  ># C@ 'WORD +  256 ># C@ -  ;
+	DT two_drop
+	DX to_number_sign-2
+	DT c_fetch
+	DX tick_word-2
+	DT plus
+	DT literal_raw
+	DW 256
+	DX to_number_sign-2
+	DT c_fetch
+	DT minus
+	DT exit
+
+
+	; \ Do # until quotient is zero
+	; : #S ( ud1 -- ud2 )
+	HEADER number_sign_s, "#S", 0
+	DW colon_code
+number_sign_s:
+	; BEGIN # 2DUP D0= UNTIL
+.begin:
+	DX number_sign-2
+	DT two_dup
+	DX d_zero_equals-2
+	DT until_raw
+	DB .begin-$+256
+	DT exit
+
+
+	; \ Print an unsigned double number in the current BASE
+	; : DU. ( ud -- )
+	HEADER du_dot, "DU.", 0
+	DW colon_code
+du_dot:
+	; <# #S #> TYPE ' ' EMIT ;
+	DX less_number_sign-2
+	DX number_sign_s-2
+	DX number_sign_greater-2
+	DX type-2
+	DT c_literal
+	DB ' '
+	DX emit-2
+	DT exit
+
+
+	; \ Print a double number in the current BASE
+	; : D. ( d -- )
+	HEADER d_dot, "D.", 0
+	DW colon_code
+d_dot:
+	; TUCK
+	DT tuck
+	; <#
+	DX less_number_sign-2
+	; DUP 0<  IF  0. 2SWAP D-  THEN
+	DT dup
+	DT zero_less
+	DT if_raw
+	DB .then-$-1
+	DT zero_literal
+	DT zero_literal
+	DX two_swap-2
+	DX d_minus-2
+.then:
+	; #S
+	DX number_sign_s-2
+	; ROT SIGN
+	DT rot
+	DX sign-2
+	; #> TYPE
+	DX number_sign_greater-2
+	DX type-2
+	; ' ' EMIT ;
+	DT c_literal
+	DB ' '
+	DX emit-2
+	DT exit
+
+
+	; \ Print an unsigned number in the current BASE
+	; : U. ( u -- )
+	HEADER u_dot, "U.", 0
+	DW colon_code
+u_dot:
+	; BASE @ 16 = IF U$. EXIT THEN
+	DX base-2
+	DT fetch
+	DT c_literal
+	DB 16
+	DT equals
+	DT if_raw
+	DB .then1-$-1
+	DX u_dollar_dot-2
+	DT exit
+.then1:
+	; 0 DU. ;
+	DT zero_literal
+	DX du_dot-2
+	DT exit
+
+
+	; \ Convert single to double number
+	; : S>D ( n -- d )
+	HEADER s_to_d, "S>D", 0
+	DW colon_code
+s_to_d:
+	; DUP 0< IF -1 ELSE 0 THEN ;
+	DT dup
+	DT zero_less
+	DT if_raw
+	DB .else-$-1
+	DT literal_raw
+	DW -1
+	DT else_skip
+	DB .then-$-1
+.else:
+	DT zero_literal
+.then:
+	DT exit
+
+
+	; \ Print number in current BASE
+	; : . ( n -- )
+	HEADER dot, ".", 0
+	DW colon_code
+dot:
+	; S>D D. ;
+	DX s_to_d-2
+	DX d_dot-2
+	DT exit
+
+
 	; \ Set border to attr
 	; ( attr ) : BRDR!
 	HEADER brdr_store, "BRDR!", 0
@@ -603,6 +859,39 @@ plus:
 	ADD HL, BC
 	PUSH HL
 	JP next
+
+
+	HEADER plus_store, "+!", 0
+	DW $ + 2
+plus_store:
+	IF CHECKED
+		CALL dat_holds_2
+	ENDIF
+	POP HL
+	POP BC
+	LD E, (HL)
+	INC HL
+	LD D, (HL)
+	EX DE, HL
+	ADD HL, BC
+	EX DE, HL
+	LD (HL), D
+	DEC HL
+	LD (HL), E
+	JP next
+
+
+	; : , ( x -- ) \ Append cell to end of dictionary
+	HEADER comma, ",", 0
+	DW colon_code
+comma:
+	; HERE 2 ALLOT ! ;
+	DX here-2
+	DT c_literal
+	DB 2
+	DX allot-2
+	DT store
+	DT exit
 
 
 	HEADER minus, "-", 0
@@ -678,27 +967,6 @@ u_dollar_dot:
 	RET
 
 
-	; \ Display u with a trailing space
-	; : U. ( u -- )
-	HEADER u_dot, "U.", 0
-	DW colon_code
-u_dot:
-	; BASE @ 16 = IF U$. EXIT THEN
-	DX base-2
-	DT fetch
-	DT c_literal
-	DB 16
-	DT equals
-	DT if_raw
-	DB .then1-$-1
-	DX u_dollar_dot-2
-	DT exit
-.then1:
-	; \ TODO
-	; ;
-	DT exit
-
-
 	HEADER zero_equals, "0=", 0
 	DW $ + 2
 zero_equals:
@@ -727,7 +995,7 @@ zero_less:
 	POP AF
 	AND 0x80
 	JR Z, .zero_less__non_negative
-	LD HL, 0xFF
+	LD HL, 0xFFFF
 	PUSH HL
 	JP next
 .zero_less__non_negative:
@@ -985,17 +1253,14 @@ aligned:
 chars:
 
 
+	; : ALLOT ( n -- ) \ Add n to dictionary end pointer
 	HEADER allot, "ALLOT", 0
-	DW $ + 2
+	DW colon_code
 allot:
-	IF CHECKED
-		CALL dat_holds_1
-	ENDIF
-	POP DE
-	LD HL, (h_)
-	ADD HL, DE
-	LD (h_), HL
-	JP next
+	; H +! ;
+	DX h_-2
+	DT plus_store
+	DT exit
 
 
 	HEADER and, "AND", 0
@@ -1076,18 +1341,16 @@ c_store:
 	JP next
 
 
+	; : C, ( c -- ) \ Append byte to end of dictionary
 	HEADER c_comma, "C,", 0
-	DW $ + 2
+	DW colon_code
 c_comma:
-	IF CHECKED
-		CALL dat_holds_1
-	ENDIF
-	POP DE
-	LD HL, (h_)
-	LD (HL), E
-	INC HL
-	LD (h_), HL
-	JP next
+	; HERE 1 ALLOT C! ;
+	DX here-2
+	DT one_literal
+	DX allot-2
+	DT c_store
+	DT exit
 
 
 	HEADER c_fetch, "C@", 0
@@ -1353,21 +1616,18 @@ type:
 
 
 	HEADER s_quote_raw, '(S")', 0
-	DW $ + 2
+	DW colon_code
 s_quote_raw:
-	IF CHECKED
-		CALL dat_room_2
-	ENDIF
-	PUSH IY
-	POP HL
-	LD E, (HL)
-	LD D, 0
-	INC HL
-	PUSH HL ; addr
-	PUSH DE ; length
-	INC DE
-	ADD IY, DE
-	JP next
+	; R> DUP 1+ SWAP C@ 2DUP + >R ;
+	DT r_from
+	DT dup
+	DT one_plus
+	DT swap
+	DT c_fetch
+	DT two_dup
+	DT plus
+	DT to_r
+	DT exit
 
 
 	HEADER over, "OVER", 0
@@ -2509,7 +2769,7 @@ two_or:
 d_zero_less:
 	; NIP 0< ;
 	DT nip
-	DX zero_less-2
+	DT zero_less
 	DT exit
 
 
@@ -2646,21 +2906,23 @@ d_less_than:
 
 	; CODE D-
 	HEADER d_minus, "D-", 0
-	DW $+2
+	DW $ + 2
 d_minus:
 	IF CHECKED
 		CALL dat_holds_4
 	ENDIF
-	POP DE
+	POP AF
 	POP BC
+	POP DE
 	POP HL
+	PUSH AF
 	OR A
-	SBC HL, DE
-	EX DE, HL
-	POP HL
 	SBC HL, BC
-	PUSH HL
+	EX DE, HL
+	POP BC
+	SBC HL, BC
 	PUSH DE
+	PUSH HL
 	JP next
 
 
@@ -2715,9 +2977,8 @@ du_slash_mod:
 	; \ Refuse to divide by 0
 	; \ TODO 2DUP D0= IF ABORT" Div by 0" THEN
 	; 1. 2-ROT
-	DX two_literal_raw-2
-	DW 0
-	DW 1
+	DT one_literal
+	DT zero_literal
 	DX two_minus_rot-2
 	; ( rem den unit )
 	; \ Shift den and unit, while den smaller than rem,
@@ -2796,8 +3057,8 @@ du_slash_mod:
 	; \ Return result + remainder
 	; 2-ROT 2DROP 2DROP 2R> 2SWAP ;
 	DX two_minus_rot-2
-	DX two_drop-2
-	DX two_drop-2
+	DT two_drop
+	DT two_drop
 	DX two_r_from-2
 	DX two_swap-2
 	DT exit
