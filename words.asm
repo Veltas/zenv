@@ -621,7 +621,7 @@ sign:
 	HEADER digit, "DIGIT", 0
 	DW colon_code
 digit:
-	; DUP 9 > IF [ 'A' '0' - 10 - LITERAL ] + THEN
+	; DUP 9 > IF [ 'A' '0' - 10 - ] LITERAL + THEN
 	DT dup
 	DT c_literal
 	DB 9
