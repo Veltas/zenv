@@ -645,12 +645,10 @@ digit:
 	HEADER number_sign, "#", 0
 	DW colon_code
 number_sign:
-	; BASE @ 0  DU/MOD  DROP  DIGIT HOLD ;
+	; BASE @  DUB/MOD  DIGIT HOLD ;
 	DX base-2
 	DT fetch
-	DT zero_literal
-	DX du_slash_mod-2
-	DT drop
+	DX dub_slash_mod-2
 	DX digit-2
 	DX hold-2
 	DT exit
@@ -3077,6 +3075,36 @@ um_slash_mod:
 	DT drop
 	DT nip
 	DT exit
+
+
+	; CODE DUB/MOD ( ud byte -- ud2 rem-byte ) \ Divide ud by unsigned byte
+	HEADER dub_slash_mod, "DUB/MOD", 0
+	DW $ + 2
+dub_slash_mod:
+	IF CHECKED
+		CALL dat_holds_3
+	ENDIF
+	POP BC
+	POP DE
+	POP HL
+	LD B, 32
+	XOR A
+.loop:
+	ADD HL, HL
+	RL E
+	RL D
+	RLA
+	CP C
+	JR C, .div_larger
+	INC L
+	SUB C
+.div_larger:
+	DJNZ .loop
+	LD C, A
+	PUSH HL
+	PUSH DE
+	PUSH BC
+	JP next
 
 
 	; CODE ITONE ( u1 u2 -- ) \ half-oscillations period
