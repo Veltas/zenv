@@ -146,12 +146,11 @@ words:
 	; BEGIN
 .begin:
 	;         \ Print name
-	;         DUP >SYM TYPE  BL EMIT
+	;         DUP >SYM TYPE  SPACE
 	DT dup
 	DX to_sym-2
 	DX type-2
-	DX bl-2
-	DX emit-2
+	DX space-2
 	;         \ Goto next symbol
 	;         @
 	DT fetch
@@ -696,14 +695,12 @@ number_sign_s:
 	HEADER du_dot, "DU.", 0
 	DW colon_code
 du_dot:
-	; <# #S #> TYPE ' ' EMIT ;
+	; <# #S #> TYPE SPACE ;
 	DX less_number_sign-2
 	DX number_sign_s-2
 	DX number_sign_greater-2
 	DX type-2
-	DT c_literal
-	DB ' '
-	DX emit-2
+	DX space-2
 	DT exit
 
 
@@ -734,10 +731,8 @@ d_dot:
 	; #> TYPE
 	DX number_sign_greater-2
 	DX type-2
-	; ' ' EMIT ;
-	DT c_literal
-	DB ' '
-	DX emit-2
+	; SPACE ;
+	DX space-2
 	DT exit
 
 
@@ -1755,6 +1750,14 @@ rot:
 	PUSH HL
 	PUSH BC
 	JP next
+
+
+	HEADER space, "SPACE", 0
+	DW colon_code
+space:
+	DX bl-2
+	DX emit-2
+	DT exit
 
 
 	HEADER swap, "SWAP", 0
