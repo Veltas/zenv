@@ -1758,6 +1758,25 @@ space:
 	DT exit
 
 
+	; : SPACES ( n -- ) \ Print n spaces
+	HEADER spaces, "SPACES", 0
+	DW colon_code
+spaces:
+	; 0 MAX
+	DT zero_literal
+	DX max-2
+	; 0 ?DO SPACE LOOP ;
+	DT zero_literal
+	DT question_do_raw
+	DB .loop-$-1
+.do:
+	DX space-2
+	DT loop_raw
+	DB .do-$+256
+.loop:
+	DT exit
+
+
 	HEADER swap, "SWAP", 0
 	DW $ + 2
 swap:
