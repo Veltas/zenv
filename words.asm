@@ -1382,8 +1382,8 @@ count:
 	LD E, (HL)
 	INC HL
 	LD D, 0
-	PUSH DE
 	PUSH HL
+	PUSH DE
 	JP next
 
 
@@ -1611,15 +1611,25 @@ type:
 	HEADER s_quote_raw, '(S")', 0
 	DW colon_code
 s_quote_raw:
-	; R> DUP 1+ SWAP C@ 2DUP + >R ;
+	; R> COUNT 2DUP + >R ;
 	DT r_from
-	DT dup
-	DT one_plus
-	DT swap
-	DT c_fetch
+	DX count-2
 	DT two_dup
 	DT plus
 	DT to_r
+	DT exit
+
+
+	HEADER dot_quote_raw, '(.")', 0
+	DW colon_code
+dot_quote_raw:
+	; R> COUNT 2DUP + >R TYPE ;
+	DT r_from
+	DX count-2
+	DT two_dup
+	DT plus
+	DT to_r
+	DX type-2
 	DT exit
 
 

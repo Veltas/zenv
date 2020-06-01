@@ -31,7 +31,7 @@ c_store_tok: EQU ($-tokens)/2
 s_quote_raw_tok: EQU ($-tokens)/2
 	DW s_quote_raw-2
 dot_quote_raw_tok: EQU ($-tokens)/2
-	DW 0 ; DW dot_quote_raw-2
+	DW dot_quote_raw-2
 exit_tok: EQU ($-tokens)/2
 	DW exit-2
 loop_raw_tok: EQU ($-tokens)/2
