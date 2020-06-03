@@ -38,6 +38,8 @@ loop_raw_tok: EQU ($-tokens)/2
 	DW loop_raw-2
 one_plus_tok: EQU ($-tokens)/2
 	DW one_plus-2
+one_minus_tok: EQU ($-tokens)/2
+	DW one_minus-2
 question_do_raw_tok: EQU ($-tokens)/2
 	DW question_do_raw-2
 plus_tok: EQU ($-tokens)/2
@@ -48,6 +50,8 @@ two_slash_tok: EQU ($-tokens)/2
 	DW two_slash-2
 if_raw_tok: EQU ($-tokens)/2
 	DW if_raw-2
+of_raw_tok: EQU ($-tokens)/2
+	DW of_raw-2
 else_skip_tok: EQU ($-tokens)/2
 	DW else_skip-2
 two_dup_tok: EQU ($-tokens)/2
@@ -92,6 +96,8 @@ two_star_tok: EQU ($-tokens)/2
 	DW two_star-2
 until_raw_tok: EQU ($-tokens)/2
 	DW until_raw-2
+again_raw_tok: EQU ($-tokens)/2
+	DW again_raw-2
 and_tok: EQU ($-tokens)/2
 	DW and-2
 or_tok: EQU ($-tokens)/2

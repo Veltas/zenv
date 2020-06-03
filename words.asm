@@ -56,16 +56,22 @@ t_row:
 	DB 0
 
 
-	HEADER display_file, "DISPLAY-FILE", 0
+	HEADER t_w, "T-W", 0
 	DW constant_code
-display_file:
-	DW display_file_val
+t_w:
+	DW t_width
 
 
-	HEADER display_size, "DISPLAY-SIZE", 0
+	HEADER disp_file, "DISP-FILE", 0
 	DW constant_code
-display_size:
-	DW display_size_val
+disp_file:
+	DW disp_file_val
+
+
+	HEADER disp_size, "DISP-SIZE", 0
+	DW constant_code
+disp_size:
+	DW disp_size_val
 
 
 	HEADER attr_file, "ATTR-FILE", 0
@@ -90,6 +96,18 @@ tick_word:
 	DW constant_code
 pad:
 	DW pad_val
+
+
+	HEADER line_in, "-IN", 0
+	DW constant_code
+line_in:
+	DW line_in_val
+
+
+	HEADER line_in_size, "-IN#", 0
+	DW constant_code
+line_in_size:
+	DW line_in_size_val
 
 
 	HEADER tick_int, "'INT", 0
@@ -186,25 +204,20 @@ key:
 	HEADER main, "MAIN", 0
 	DW colon_code
 main:
-	; \ Clear screen
 	; PAGE
 	DX page-2
-	; \ Display defined words
-	; WORDS
-	DX words-2
+	; ." ZEnv Forth" CR CR
+	DT dot_quote_raw
+	DB .s1e-.s1
+.s1:
+	DM "ZEnv Forth"
+.s1e:
+	DX cr-2
+	DX cr-2
 
-	; \ Endlessly get input
-	; BEGIN
-.begin:
-		; \ Wait for key and print
-		; KEY EMIT
-		DX key-2
-		DX emit-2
-	; 0 UNTIL
-	DT zero_literal
-	DT until_raw
-	DB .begin-$+256
-	; ;
+	; \ Run interpreter
+	; QUIT ;
+	DX quit-2
 	DT exit
 
 
@@ -274,10 +287,10 @@ scroll:
 	DX max-2
 	DX t_row-2
 	DT c_store
-	; DISPLAY-FILE 2048 +  DISPLAY-FILE  4096  CMOVE
+	; DISP-FILE 2048 +  DISP-FILE  4096  CMOVE
 	DT literal_raw
-	DW display_file_val + 2048
-	DX display_file-2
+	DW disp_file_val + 2048
+	DX disp_file-2
 	DT literal_raw
 	DW 4096
 	DX cmove-2
@@ -288,9 +301,9 @@ scroll:
 	DT literal_raw
 	DW 512
 	DX cmove-2
-	; DISPLAY-FILE 4096 +  2048  ERASE
+	; DISP-FILE 4096 +  2048  ERASE
 	DT literal_raw
-	DW display_file_val + 4096
+	DW disp_file_val + 4096
 	DT literal_raw
 	DW 2048
 	DX erase-2
@@ -328,6 +341,30 @@ cr:
 	DX t_col-2
 	DT c_store
 	; ;
+	DT exit
+
+
+	; : BS ( -- ) \ Write a backspace to terminal
+	HEADER bs, "BS", 0
+	DW colon_code
+bs:
+	; T-COL C@ ?DUP IF
+	DX t_col-2
+	DT c_fetch
+	DT question_dup
+	DT if_raw
+	DB .then-$-1
+		; ( col )
+		; 1-  DUP T-COL C!  SPACE  T-COL C!
+		DT one_minus
+		DT dup
+		DX t_col-2
+		DT c_store
+		DX space-2
+		DX t_col-2
+		DT c_store
+	; THEN ;
+.then:
 	DT exit
 
 
@@ -378,7 +415,7 @@ emit:
 	LD L, A
 	LD A, H
 	AND 0x18
-	ADD A, display_file_val/256
+	ADD A, disp_file_val/256
 	LD H, A
 	; B is t_col
 	LD A, (t_col)
@@ -449,6 +486,13 @@ emit:
 	LD HL, colon_code
 	CALL Z, asm_call
 
+	CP 8
+
+	; Run BS if 8
+	LD DE, bs
+	LD HL, colon_code
+	CALL Z, asm_call
+
 	JP next
 
 	ELSE ; !NARROW_FONT ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -514,6 +558,11 @@ emit:
 
 	CP 0x0A - 0x20
 	LD DE, cr
+	LD HL, colon_code
+	CALL Z, asm_call
+
+	CP 0x08 - 0x20
+	LD DE, bs
 	LD HL, colon_code
 	CALL Z, asm_call
 
@@ -826,9 +875,9 @@ page:
 	DT zero_literal
 	DX at_xy-2
 	; \ Erase bitmap
-	; DISPLAY-FILE DISPLAY-SIZE ERASE
-	DX display_file-2
-	DX display_size-2
+	; DISP-FILE DISP-SIZE ERASE
+	DX disp_file-2
+	DX disp_size-2
 	DX erase-2
 	; \ Set attr region to current T-ATTR
 	; ATTR-FILE ATTR-SIZE T-ATTR C@ FILL
@@ -1663,6 +1712,67 @@ over_two:
 	JP next
 
 
+	; : -READ ( -- addr u ) \ Read a line of input into -IN
+	HEADER line_read, "-READ", 0
+	DW colon_code
+line_read:
+	; 0 BEGIN DUP -IN# < WHILE
+	DT zero_literal
+.begin:
+	DT dup
+	DX line_in_size-2
+	DT less_than
+	DT if_raw
+	DB .repeat-$-1
+		; ( idx )
+		; KEY DUP CASE
+		DX key-2
+		DT dup
+			; ( idx key key )
+			; 8  OF EMIT  1-           ENDOF
+			DT c_literal
+			DB 8
+			DT of_raw
+			DB .endof1-$-1
+			DX emit-2
+			DT one_minus
+			DT else_skip
+			DB .endcase-$-1
+.endof1:
+			; 10 OF DROP -IN SWAP EXIT ENDOF
+			DT c_literal
+			DB 10
+			DT of_raw
+			DB .endof2-$-1
+			DT drop
+			DX line_in-2
+			DT swap
+			DT exit
+			DT else_skip
+			DB .endcase-$-1
+.endof2:
+			; EMIT OVER -IN + C!  1+
+			DX emit-2
+			DT over
+			DX line_in-2
+			DT plus
+			DT c_store
+			DT one_plus
+		; 0 ENDCASE
+		DT zero_literal
+		DT drop
+.endcase:
+	; REPEAT
+	DT repeat_raw
+	DB .begin-$+256
+.repeat:
+	; ( idx )
+	; -IN SWAP ;
+	DX line_in-2
+	DT swap
+	DT exit
+
+
 	; : QUIT ( -- ) \ Reset return stack then start interpretation
 	HEADER quit, "QUIT", 0
 	DW colon_code
@@ -1670,8 +1780,29 @@ quit:
 	; R0 RP!
 	DX r_zero-2
 	DX rp_store-2
-	; BEGIN -' IF NUMBER ELSE EXECUTE THEN 0 UNTIL ;
-	; DW interpret-2
+	; BEGIN
+.begin:
+		; -READ EVALUATE ."  ok" CR
+		DX line_read-2
+		DX evaluate-2
+		DT dot_quote_raw
+		DB .s1e-.s1
+.s1:
+		DM " ok"
+.s1e:
+		DX cr-2
+	; AGAIN ;
+	DT again_raw
+	DB .begin-$+256
+	DT exit
+
+
+	; : EVALUATE ( ??? addr u -- ??? )
+	HEADER evaluate, "EVALUATE", 0
+	DW colon_code
+evaluate:
+	; BEGIN -' IF NUMBER ELSE EXECUTE THEN AGAIN ;
+	DT two_drop
 	DT exit
 
 
@@ -1961,10 +2092,29 @@ if_raw:
 	LD A, E
 	OR D
 	JR NZ, .if_raw__end
+	LD E, (IY-1)
+	ADD IY, DE
+.if_raw__end:
+	JP next
+
+
+	HEADER of_raw, "(OF)", 0
+	DW $ + 2
+of_raw:
+	IF CHECKED
+		CALL dat_holds_2
+	ENDIF
+	INC IY
+	POP HL
+	POP DE
+	OR A
+	SBC HL, DE
+	JR Z, ._end
 	LD C, (IY-1)
 	LD B, 0
 	ADD IY, BC
-.if_raw__end:
+	PUSH DE
+._end:
 	JP next
 
 
@@ -2485,14 +2635,20 @@ until_raw:
 	POP HL
 	LD A, L
 	OR H
-	JR Z, .loop
+	JR Z, until_raw_loop
 	INC IY
 	JP next
-.loop:
+until_raw_loop:
 	LD C, (IY+0)
 	LD B, 0xFF
 	ADD IY, BC
 	JP next
+
+
+	HEADER again_raw, "(AGAIN)", 0
+	DW $ + 2
+again_raw:
+	JR until_raw_loop
 
 
 	HEADER equals, "=", 0

@@ -35,8 +35,8 @@ t_width: EQU 32
 	ENDIF
 t_attr_init: EQU (0x7 << 0)
 load_addr: EQU 0x8000
-display_file_val: EQU 0x4000
-display_size_val: EQU 0x1800
+disp_file_val: EQU 0x4000
+disp_size_val: EQU 0x1800
 attr_file_val: EQU 0x5800
 attr_size_val: EQU 0x300
 ula_val: EQU 0xFE
@@ -45,8 +45,11 @@ symbols: EQU attr_file_val + attr_size_val
 symbols_size: EQU symbols + 3*1024
 	; Address of PAD
 pad_val: EQU 0xFB00
+	; Address of line input buffer
+line_in_val: EQU 0xFC00
+line_in_size_val: EQU t_width; 0x80
 	; Address WORD is stored in
-tick_word_val: EQU 0xFC00
+tick_word_val: EQU 0xFC80
 	; Address data stack starts at
 param_stack_top: EQU 0xFDF0
 param_stack_size: EQU 0xE0
