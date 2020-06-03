@@ -2646,9 +2646,8 @@ until_raw_loop:
 
 
 	HEADER again_raw, "(AGAIN)", 0
-	DW $ + 2
+	DW until_raw_loop
 again_raw:
-	JR until_raw_loop
 
 
 	HEADER equals, "=", 0
