@@ -1938,7 +1938,6 @@ quit:
 		DX tick_in-2
 		DT store
 		DX interpret-2
-		DX type-2
 		DT dot_quote_raw
 		DB .s1e-.s1
 .s1:
