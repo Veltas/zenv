@@ -2111,10 +2111,11 @@ word:
 		DT one_literal
 		DX to_in-2
 		DT plus_store
-	; REPEAT
+	; REPEAT DROP
 	DT repeat_raw
 	DB .begin-$+256
 .repeat:
+	DT drop
 	; \ Parse
 	; CPARSE ;
 	DX cparse-2
@@ -2225,7 +2226,7 @@ fmatch:
 	DT plus
 	; ( cstr sym-cstr )
 	; \ Are the sizes the same?
-	; 2dup c@ $7F and swap c@ = IF
+	; 2dup c@ $7F and swap c@ <> IF
 	DT two_dup
 	DT c_fetch
 	DT c_literal
@@ -2233,7 +2234,7 @@ fmatch:
 	DT and
 	DT swap
 	DT c_fetch
-	DT equals
+	DT not_equals
 	DT if_raw
 	DB .then-$-1
 		; 2drop true exit
@@ -2243,13 +2244,13 @@ fmatch:
 	; THEN
 .then:
 	; \ Are the strings the same?
-	; 1+ swap dup 1+ swap @ 0 ?DO
+	; 1+ swap dup 1+ swap c@ 0 ?DO
 	DT one_plus
 	DT swap
 	DT dup
 	DT one_plus
 	DT swap
-	DT fetch
+	DT c_fetch
 	DT zero_literal
 	DT question_do_raw
 	DB .loop-$-1
@@ -2274,19 +2275,17 @@ fmatch:
 			DT exit
 		; THEN
 .then2:
-	; LOOP 2drop
+	; LOOP drop
 	DT loop_raw
 	DB .do-$+256
 .loop:
-	DT two_drop
-	; nip
-	DT nip
+	DT drop
 	; ( sym-str )
 	; 1- dup  [ 1 cells ] LITERAL - @  swap c@
 	DT one_minus
 	DT dup
 	DT c_literal
-	DW 2
+	DB 2
 	DT minus
 	DT fetch
 	DT swap
@@ -2302,7 +2301,7 @@ fmatch:
 	DT else_skip
 	DB .then3-$-1
 .else3:
-	DX false-2
+	DX true-2
 .then3:
 	; ( xt 1/-1 )
 	; 0 ;
@@ -2356,23 +2355,23 @@ upper:
 
 
 	; \ Convert a string in-place to uppercase
-	; : SUPPER ( str len -- )
+	; : supper ( str len -- )
 	HEADER supper, "SUPPER", 0
 	DW colon_code
 supper:
-	; OVER + SWAP ?DO
+	; over + swap ?DO
 	DT over
 	DT plus
 	DT swap
 	DT question_do_raw
 	DB .loop-$-1
 .do:
-		; I @ UPPER I !
+		; i c@ upper i c!
 		DT r_fetch
-		DT fetch
+		DT c_fetch
 		DX upper-2
 		DT r_fetch
-		DT store
+		DT c_store
 	; LOOP ;
 .loop:
 	DT loop_raw
@@ -2418,32 +2417,33 @@ find:
 
 
 	; \ Interpret input buffer until empty
-	; : INTERPRET ( ? -- ? )
+	; : interpret ( ? -- ? )
 	HEADER interpret, "INTERPRET", 0
 	DW colon_code
 interpret:
-	; 0 STATE DUP @ >R !
+	; 0 state dup @ >r !
 	DT zero_literal
 	DX state-2
 	DT dup
 	DT fetch
 	DT to_r
 	DT store
-	; BEGIN BL WORD ?DUP WHILE
+	; BEGIN bl word dup c@ WHILE
 .begin:
 	DX bl-2
 	DX word-2
-	DT question_dup
+	DT dup
+	DT c_fetch
 	DT if_raw
 	DB .repeat-$-1
-		; FIND
+		; find
 		DX find-2
-		; ?DUP 0= IF
+		; ?dup 0= IF
 		DT question_dup
 		DT zero_equals
 		DT if_raw
 		DB .else-$-1
-			; NUMBER  STATE @  IF  POSTPONE LITERAL  THEN
+			; number  state @  IF  POSTPONE LITERAL  THEN
 			DX number-2
 			DX state-2
 			DT fetch
@@ -2455,7 +2455,7 @@ interpret:
 		DT else_skip
 		DB .then-$-1
 .else:
-			; 0<  STATE @  AND  IF COMPILE, ELSE EXECUTE THEN
+			; 0<  state @  and  IF compile, ELSE execute THEN
 			DT zero_less
 			DX state-2
 			DT fetch
@@ -2470,12 +2470,12 @@ interpret:
 .then3:
 		; THEN
 .then:
-	; REPEAT DROP
+	; REPEAT drop
 	DT repeat_raw
 	DB .begin-$+256
 .repeat:
 	DT drop
-	; R> STATE ! ;
+	; r> state ! ;
 	DT r_from
 	DX state-2
 	DT store
@@ -2620,7 +2620,7 @@ r_zero:
 
 
 	HEADER to_in, ">IN", 0
-	DW constant_code
+	DW create_code
 to_in:
 	DW 0
 
@@ -4176,10 +4176,11 @@ dot_s:
 .s2:
 	DM "> "
 .s2e:
-	; 's s0 = IF EXIT THEN
+	; 's s0 < INVERT IF EXIT THEN
 	DX tick_s-2
 	DX s_zero-2
-	DT equals
+	DT less_than
+	DT invert
 	DT if_raw
 	DB .then-$-1
 	DT exit
@@ -4197,6 +4198,69 @@ dot_s:
 		DT r_fetch
 		DT fetch
 		DX dot-2
+	; -2 +LOOP ;
+	DT literal_raw
+	DW -2
+	DT plus_loop_raw
+	DB .do-$+256
+.loop:
+	DT exit
+
+
+	; \ Print current state of stack
+	; : .r ( -- )
+	HEADER dot_r, ".R", 0
+	DW colon_code
+dot_r:
+	; \ Print size of stack in brackets
+	; 'r r0 swap - 2/ 1-
+	DX tick_r-2
+	DX r_zero-2
+	DT swap
+	DT minus
+	DT two_slash
+	DT one_minus
+	; ." <"
+	DT dot_quote_raw
+	DB .s1e-.s1
+.s1:
+	DM "<"
+.s1e:
+	; <# 0 #s #> type
+	DX less_number_sign-2
+	DT zero_literal
+	DX number_sign_s-2
+	DX number_sign_greater-2
+	DX type-2
+	; ." > "
+	DT dot_quote_raw
+	DB .s2e-.s2
+.s2:
+	DM "> "
+.s2e:
+	; 'r cell+ r0 = IF EXIT THEN
+	DX tick_r-2
+	DX cell_plus-2
+	DX r_zero-2
+	DT equals
+	DT if_raw
+	DB .then-$-1
+	DT exit
+.then:
+	; \ Print contents of stack
+	; 'r cell+ r0 2 -  DO
+	DX tick_r-2
+	DX cell_plus-2
+	DX r_zero-2
+	DT c_literal
+	DB 2
+	DT minus
+	DT two_to_r
+.do:
+		; i @ u.
+		DT r_fetch
+		DT fetch
+		DX u_dot-2
 	; -2 +LOOP ;
 	DT literal_raw
 	DW -2
