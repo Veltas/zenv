@@ -36,6 +36,8 @@ exit_tok: EQU ($-tokens)/2
 	DW exit-2
 loop_raw_tok: EQU ($-tokens)/2
 	DW loop_raw-2
+plus_loop_raw_tok: EQU ($-tokens)/2
+	DW plus_loop_raw-2
 one_plus_tok: EQU ($-tokens)/2
 	DW one_plus-2
 one_minus_tok: EQU ($-tokens)/2

@@ -4,7 +4,8 @@
 
 NARROW_FONT: EQU 0
 CHECKED: EQU 0
-TOKENIZED: EQU 1
+TOKENIZED: EQU 0
+SMALLER: EQU 0
 
 	IF TOKENIZED
 
@@ -163,7 +164,7 @@ next:
 	LD A, (IY+0)
 	INC IY
 	CP 0x80
-	JR NC, .next__not_token
+	JR NC, next__not_token
 	ADD A, A
 	LD L, A
 	LD H, 0
@@ -174,7 +175,7 @@ next:
 	INC HL
 	LD D, (HL)
 	EX DE, HL
-.next__got_code_ptr:
+next__got_code_ptr:
 	; DE = param, HL = code pointer
 	LD E, (HL)
 	INC HL
@@ -183,12 +184,12 @@ next:
 	EX DE, HL
 	; Execute code
 	JP (HL)
-.next__not_token:
+next__not_token:
 	; HL = code pointer address
 	LD H, A
 	LD L, (IY+0)
 	INC IY
-	JR .next__got_code_ptr
+	JR next__got_code_ptr
 
 	ELSE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -197,6 +198,7 @@ next:
 	LD H, (IY+1)
 	INC IY
 	INC IY
+next__got_code_ptr:
 	LD E, (HL)
 	INC HL
 	LD D, (HL)
@@ -320,6 +322,7 @@ ret_room_1:
 ret_room_2:
 ret_holds_1:
 ret_holds_2:
+dat_holds_1_ret_holds_2:
 dat_holds_1_ret_room_1:
 dat_holds_2_ret_room_2:
 dat_room_1_ret_holds_1:
@@ -332,6 +335,7 @@ tokens:
 	INCLUDE "tokens.asm"
 	;DS tokens+128*2 - $
 	ENDIF
+tokens_end:
 
 
 	IF NARROW_FONT
