@@ -4152,13 +4152,12 @@ compare:
 	DW colon_code
 dot_s:
 	; \ Print size of stack in brackets
-	; 's s0 swap - 2/ dup
+	; 's s0 swap - 2/
 	DX tick_s-2
 	DX s_zero-2
 	DT swap
 	DT minus
 	DT two_slash
-	DT dup
 	; ." <"
 	DT dot_quote_raw
 	DB .s1e-.s1
@@ -4177,10 +4176,34 @@ dot_s:
 .s2:
 	DM "> "
 .s2e:
+	; 's s0 = IF EXIT THEN
+	DX tick_s-2
+	DX s_zero-2
+	DT equals
+	DT if_raw
+	DB .then-$-1
+	DT exit
+.then:
 	; \ Print contents of stack
-	; 0= IF exit THEN
-	; 's s0 2 - swap ?DO
-	; -2 +LOOP
+	; 's  s0 2 -  DO
+	DX tick_s-2
+	DX s_zero-2
+	DT c_literal
+	DB 2
+	DT minus
+	DT two_to_r
+.do:
+		; i @ .
+		DT r_fetch
+		DT fetch
+		DX dot-2
+	; -2 +LOOP ;
+	DT literal_raw
+	DW -2
+	DT plus_loop_raw
+	DB .do-$+256
+.loop:
+	DT exit
 
 
 repeat_wait_init: EQU 45  ; 0.9s
