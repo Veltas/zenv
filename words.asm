@@ -2095,19 +2095,11 @@ cparse:
 word:
 	; \ Ignore initial delimiters
 	; ( c )
-	; BEGIN ppeek dup IF 2dup = ELSE 0 THEN WHILE
+	; BEGIN ppeek 2dup = WHILE
 .begin:
 	DX ppeek-2
-	DT dup
-	DT if_raw
-	DB .else-$-1
 	DT two_dup
 	DT equals
-	DT else_skip
-	DB .then-$-1
-.else:
-	DT zero_literal
-.then:
 	DT if_raw
 	DB .repeat-$-1
 		; 1 >in +!
