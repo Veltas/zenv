@@ -2089,34 +2089,38 @@ cparse:
 
 
 	; \ Parse counted string www, delimited by c
-	; : WORD ( c "<c...>www<c>" -- addr )
+	; : word ( c "<c...>www<c>" -- addr )
 	HEADER word, "WORD", 0
 	DW colon_code
 word:
 	; \ Ignore initial delimiters
 	; ( c )
-	; BEGIN PPEEK DUP IF 2DUP = THEN WHILE
+	; BEGIN ppeek dup IF 2dup = ELSE 0 THEN WHILE
 .begin:
 	DX ppeek-2
 	DT dup
 	DT if_raw
-	DB .then-$-1
+	DB .else-$-1
 	DT two_dup
 	DT equals
+	DT else_skip
+	DB .then-$-1
+.else:
+	DT zero_literal
 .then:
 	DT if_raw
 	DB .repeat-$-1
-		; 1 >IN +!
+		; 1 >in +!
 		DT one_literal
 		DX to_in-2
 		DT plus_store
-	; REPEAT DROP
+	; REPEAT drop
 	DT repeat_raw
 	DB .begin-$+256
 .repeat:
 	DT drop
 	; \ Parse
-	; CPARSE ;
+	; cparse ;
 	DX cparse-2
 	DT exit
 
@@ -4237,11 +4241,12 @@ dot_r:
 .s2:
 	DM "> "
 .s2e:
-	; 'r cell+ r0 = IF EXIT THEN
+	; 'r cell+ r0 < INVERT IF EXIT THEN
 	DX tick_r-2
 	DX cell_plus-2
 	DX r_zero-2
-	DT equals
+	DT less_than
+	DT invert
 	DT if_raw
 	DB .then-$-1
 	DT exit
