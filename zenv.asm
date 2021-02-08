@@ -2623,6 +2623,75 @@ line_read:
 	DW exit
 
 
+	; ( c-addr -- c-addr 0 | xt 1 | xt -1 )
+	; CODE FIND
+	HEADER find, "FIND", 0
+find:
+	PUSH HL
+	; B = size of name
+	LD B, (HL)
+	; Load first symbol
+	LD HL, (sym_last+3)
+	; Start loop
+	JR .loop_cond
+.loop:
+	; Compare sizes
+	INC HL
+	INC HL
+	LD A, (HL)
+	AND 0x7F
+	CP B
+	JP NZ, .not_equal
+	; Loop over characters to compare strings if same size
+	POP DE
+	PUSH DE
+	PUSH HL
+	PUSH BC
+.loop2:
+	INC HL
+	LD C, (HL)
+	INC DE
+	LD A, (DE)
+	CP C
+	JP NZ, .not_equal2
+	DJNZ .loop2
+	; If fall through loop then strings match
+	POP BC
+	POP HL
+	POP DE
+	LD A, (HL)
+	AND 0x80
+	LD DE, 1
+	JR NZ, .immediate
+	LD DE, -1
+.immediate:
+	LD C, B
+	LD B, 0
+	ADD HL, BC
+	INC HL
+	PUSH HL
+	EX DE, HL
+	JP next
+.not_equal2:
+	POP BC
+	POP HL
+.not_equal:
+	DEC HL
+	DEC HL
+	; Next symbol
+	LD E, (HL)
+	INC HL
+	LD D, (HL)
+	EX DE, HL
+.loop_cond:
+	; Loop while not 0
+	LD A, H
+	OR L
+	JP NZ, .loop
+	; If loop falls through then no match is found
+	JP next
+
+
 	; \ Interpret input buffer until empty
 	; : interpret ( ? -- ? )
 	HEADER interpret, "INTERPRET", 0
@@ -2943,7 +3012,7 @@ cparse:
 	; PARSE
 	DW parse
 	; ( addr u)
-	; DUP 256 >= IF ABORT" counted word overflow" THEN
+	; DUP 256 >= IF ABORT" long name" THEN
 	DW dup
 	DW literal_raw
 	DW 256
@@ -2953,7 +3022,7 @@ cparse:
 	DW s_quote_raw
 	DB .e1-.s1
 .s1:
-	DM "counted word overflow"
+	DM "long name"
 .e1:
 	DW abort_quote_raw
 .then:
@@ -3375,75 +3444,6 @@ upper:
 	; THEN \
 .then:
 	DW exit
-
-
-	; ( c-addr -- c-addr 0 | xt 1 | xt -1 )
-	; CODE FIND
-	HEADER find, "FIND", 0
-find:
-	PUSH HL
-	; B = size of name
-	LD B, (HL)
-	; Load first symbol
-	LD HL, (sym_last+3)
-	; Start loop
-	JR .loop_cond
-.loop:
-	; Compare sizes
-	INC HL
-	INC HL
-	LD A, (HL)
-	AND 0x7F
-	CP B
-	JP NZ, .not_equal
-	; Loop over characters to compare strings if same size
-	POP DE
-	PUSH DE
-	PUSH HL
-	PUSH BC
-.loop2:
-	INC HL
-	LD C, (HL)
-	INC DE
-	LD A, (DE)
-	CP C
-	JP NZ, .not_equal2
-	DJNZ .loop2
-	; If fall through loop then strings match
-	POP BC
-	POP HL
-	POP DE
-	LD A, (HL)
-	AND 0x80
-	LD DE, 1
-	JR NZ, .immediate
-	LD DE, -1
-.immediate:
-	LD C, B
-	LD B, 0
-	ADD HL, BC
-	INC HL
-	PUSH HL
-	EX DE, HL
-	JP next
-.not_equal2:
-	POP BC
-	POP HL
-.not_equal:
-	DEC HL
-	DEC HL
-	; Next symbol
-	LD E, (HL)
-	INC HL
-	LD D, (HL)
-	EX DE, HL
-.loop_cond:
-	; Loop while not 0
-	LD A, H
-	OR L
-	JP NZ, .loop
-	; If loop falls through then no match is found
-	JP next
 
 
 	; : ERASE 0 FILL \
@@ -4404,6 +4404,165 @@ dot_rs:
 	DW plus_loop_raw
 	DB .do-$+256
 .loop:
+	DW exit
+
+
+	; \ Print immediate string
+	; ( "...<r-paren>" --)
+	; : .( [CHAR] ) PARSE TYPE ; IMMEDIATE
+	HEADER dot_paren, ".(", 1
+dot_paren:
+	CALL colon_code
+	DW raw_char
+	DB ')'
+	DW parse
+	DW type
+	DW exit
+
+
+	; \ Inline comment
+	; ( "...<r-paren>" --)
+	; : ( [CHAR] ) PARSE 2DROP ; IMMEDIATE
+	HEADER paren, "(", 1
+paren:
+	CALL colon_code
+	DW raw_char
+	DB ')'
+	DW parse
+	DW two_drop
+	DW exit
+
+
+	; \ Line comment
+	; ( "......" --)
+	; : \ IN# @ >IN ! ; IMMEDIATE
+	HEADER backslash, "\\", 1
+backslash:
+	CALL colon_code
+	DW in_size
+	DW fetch
+	DW to_in
+	DW store
+	DW exit
+
+
+	; \ Compile a Z80 CALL instruction
+	; ( addr --)
+	; HEX : CALL CD C, , ; DECIMAL
+	HEADER _call, "CALL", 0
+_call:
+	CALL colon_code
+	DW raw_char
+	DB 0xCD
+	DW c_comma
+	DW comma
+	DW exit
+
+
+	; \ Compile string as counted string
+	; ( addr u --)
+	; : CSTR,
+	HEADER cstr_comma, "CSTR,", 0
+cstr_comma:
+	CALL colon_code
+	; \ Store length
+	; DUP C,
+	DW dup
+	DW c_comma
+	; \ Store string
+	; OVER + SWAP ?DO I C@ C, LOOP ;
+	DW over
+	DW plus
+	DW swap
+	DW question_do_raw
+	DB .loop-$-1
+.do:
+	DW r_fetch
+	DW c_fetch
+	DW c_comma
+	DW loop_raw
+	DB .do-$+256
+.loop:
+	DW exit
+
+
+	; \ Create new symbol from parsed name
+	; ( " name" --)
+	HEADER sym_comma, "SYM,", 0
+sym_comma:
+	CALL colon_code
+	; \ Write back-link
+	; SYM-LAST @ ,
+	DW sym_last
+	DW fetch
+	DW comma
+	; \ Parse the name
+	; PARSE-NAME
+	DW parse_name
+	; ( str-addr str-u)
+	; \ Must be non-empty
+	; DUP 0= IF ABORT" missing name" THEN
+	DW dup
+	DW zero_equals
+	DW if_raw
+	DB .then-$-1
+	DW s_quote_raw
+	DB .e1-.s1
+.s1:
+	DM "missing name"
+.e1:
+	DW abort_quote_raw
+.then:
+	; \ Must be smaller than 64 chars
+	; DUP 64 >= IF ABORT" long name" THEN
+	DW dup
+	DW raw_char
+	DB 64
+	DW greater_than_or_equal
+	DW if_raw
+	DB .then2-$-1
+	DW s_quote_raw
+	DB .e2-.s2
+.s2:
+	DM "long name"
+.e2:
+	DW abort_quote_raw
+.then2:
+	; \ Compile counted string
+	; CSTR, ;
+	DW cstr_comma
+	DW exit
+
+
+	; \ Create new definition, and make it findable
+	; \ At runtime: ( -- data-addr)
+	; ( " name" --)
+	; HEX : CREATE
+	HEADER create, "CREATE", 0
+create:
+	CALL colon_code
+	; \ Retain address of new symbol
+	; HERE
+	DW here
+	; ( addr " name")
+	; \ Create new symbol with parsed name
+	; SYM,
+	DW sym_comma
+	; ( addr)
+	; \ Write 'CALL create-code' instruction
+	; ??? CALL
+	DW literal_raw
+	DW create_code
+	DW _call
+	; \ Make symbol findable
+	; SYM-LAST ! ; DECIMAL
+
+	DW cr
+	DW dot_s
+	DW cr
+
+	DW sym_last
+	DW store
 	DW exit
 
 
