@@ -1395,6 +1395,13 @@ true:
 	DW -1
 
 
+	; 1 CELLS CONSTANT CELL
+	HEADER cell, "CELL", 0
+cell:
+	CALL constant_code
+	DW 2
+
+
 	; Current data space pointer
 	HEADER h_, "H", 0
 h_:
@@ -1681,6 +1688,18 @@ within:
 	; ( offset range-length )
 	; U< \
 	DW u_less_than
+	DW exit
+
+
+	; : , ( x -- ) \ Append cell to end of dictionary
+	HEADER comma, ",", 0
+comma:
+	CALL colon_code
+	; HERE CELL ALLOT ! \
+	DW here
+	DW cell
+	DW allot
+	DW store
 	DW exit
 
 
@@ -2251,19 +2270,6 @@ page:
 	DW c_fetch
 	DW fill
 	; \
-	DW exit
-
-
-	; : , ( x -- ) \ Append cell to end of dictionary
-	HEADER comma, ",", 0
-comma:
-	CALL colon_code
-	; HERE 2 ALLOT ! \
-	DW here
-	DW raw_char
-	DB 2
-	DW allot
-	DW store
 	DW exit
 
 
@@ -3925,9 +3931,9 @@ klast:
 	; \ Update keyboard state
 	; CODE KSCAN ( -- )
 	HEADER kscan, "KSCAN", 0
-	DW $ + 2
 kscan:
-	PUSH IX
+	PUSH IY
+	PUSH HL
 	; If no keys are down, skip
 	LD BC, 0x00FE
 	IN A, (C)
@@ -3941,7 +3947,8 @@ kscan:
 	LD (kstate+3+2), HL
 	LD (kstate+3+4), HL
 	LD (kstate+3+6), HL
-	POP IX
+	POP HL
+	POP IY
 	JP next
 
 .keys_down
@@ -3960,25 +3967,26 @@ kscan:
 	; BC is 0xFEFE and will rotate to 7FFE
 	; E is counter
 	LD E, 7
-	; IX is KSTATE pointer
-	LD IX, kstate+3
+	; IY is KSTATE pointer
+	LD IY, kstate+3
 .loop:
 	; If row is empty, clear state and skip
 	IN A, (C)
 	CPL
 	JR NZ, .row_down
-	LD (IX+0), A
+	LD (IY+0), A
 .next_loop:
-	INC IX
+	INC IY
 	RLC B
 	DEC E
 	JP P, .loop
-	POP IX
+	POP HL
+	POP IY
 	JP next
 .row_down:
-	; BC is port, E is counter, A is input, IX is kstate+E
+	; BC is port, E is counter, A is input, IY is kstate+E
 	; D is old state
-	LD D, (IX+0)
+	LD D, (IY+0)
 	; H becomes input store, will rotate to get all needed bits
 	LD H, A
 	; If same as old state, skip
@@ -4045,7 +4053,7 @@ kscan:
 	RRCA
 	RRCA
 	RRCA
-	LD (IX+0), A
+	LD (IY+0), A
 	JR .next_loop
 
 
@@ -4558,6 +4566,16 @@ create:
 	; SYM-LAST ! ; DECIMAL
 	DW sym_last
 	DW store
+	DW exit
+
+
+	; : VARIABLE CREATE 0 , ;
+	HEADER variable, "VARIABLE", 0
+variable:
+	CALL colon_code
+	DW create
+	DW zero_literal
+	DW comma
 	DW exit
 
 
