@@ -4556,11 +4556,6 @@ create:
 	DW _call
 	; \ Make symbol findable
 	; SYM-LAST ! ; DECIMAL
-
-	DW cr
-	DW dot_s
-	DW cr
-
 	DW sym_last
 	DW store
 	DW exit
