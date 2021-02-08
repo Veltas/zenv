@@ -3790,8 +3790,8 @@ kmap:
 	DB ',', '-', ']', "'", '$', '<', '{', '?'
 	; '.' C, '+' C, '`' C, '(' C, '#' C, 0 C, '\' C, $7F C,
 	DB '.', '+', '`', '(', '#', 0, 0x5C, 0x7F
-	; 0 C, '=' C, '\' C, ')' C, '@' C, 0 C, '|' C, ':' C,
-	DB 0, '=', '\', ')', '@', 0, '|', ':'
+	; 0 C, '=' C, ';' C, ')' C, '@' C, 0 C, '|' C, ':' C,
+	DB 0, '=', ';', ')', '@', 0, '|', ':'
 	; 0 C, $0A C, '"' C, '_' C, '!' C, 0 C, '~' C, 0 C,
 	DB 0, 0x0A, '"', '_', '!', 0, '~', 0
 
@@ -4569,14 +4569,110 @@ create:
 	DW exit
 
 
-	; : VARIABLE CREATE 0 , ;
+	; : VARIABLE CREATE CELL ALLOT ;
 	HEADER variable, "VARIABLE", 0
 variable:
 	CALL colon_code
 	DW create
-	DW zero_literal
-	DW comma
+	DW cell
+	DW allot
 	DW exit
+
+
+	; \ Switch to compilation mode
+	; ( --)
+	; : ] TRUE STATE ! ;
+	HEADER right_bracket, "]", 0
+right_bracket:
+	CALL colon_code
+	DW true
+	DW state
+	DW store
+	DW exit
+
+
+	; \ Switch to interpreter mode immediately
+	; ( --)
+	; : [ FALSE STATE ! ; IMMEDIATE
+	HEADER left_bracket, "[", 1
+left_bracket:
+	CALL colon_code
+	DW false
+	DW state
+	DW store
+	DW exit
+
+
+	; \ Use to remember stack depth before/after colon def
+	; VARIABLE :DEPTH
+	HEADER colon_depth, ":DEPTH", 0
+colon_depth:
+	CALL create_code
+	DW 0
+
+
+	; \ Start compiling a colon definition with given name
+	; ( " name" -- colon-sys)
+	; : :
+	HEADER colon, ":", 0
+colon:
+	CALL colon_code
+	; \ Retain address of symbol
+	; HERE
+	DW here
+	; \ Remember stack depth
+	; DEPTH :DEPTH !
+	DW depth
+	DW colon_depth
+	DW store
+	; ( colon-sys " name")
+	; \ Write symbol header
+	; SYM,
+	DW sym_comma
+	; ( colon-sys)
+	; \ Write CALL colon-code
+	; ??? CALL
+	DW literal_raw
+	DW colon_code
+	DW _call
+	; \ Start compiling
+	; ] ;
+	DW right_bracket
+	DW exit
+
+
+	; \ End : or DOES> definition
+	; ( --)
+	; : ;
+	HEADER semicolon, ";", 1
+semicolon:
+	CALL colon_code
+	; \ Current code exits if not already
+	; POSTPONE EXIT
+	DW literal_raw
+	DW exit
+	DW compile_comma
+	; \ Check stack depth
+	; DEPTH :DEPTH @ <> IF ABORT" unbalanced" THEN
+	DW depth
+	DW colon_depth
+	DW fetch
+	DW not_equals
+	DW if_raw
+	DB .then-$-1
+	DW s_quote_raw
+	DB .e1-.s1
+.s1:
+	DM "unbalanced"
+.e1:
+	DW abort_quote_raw
+.then:
+	; \ Make definition findable
+	; SYM-LAST ! ; IMMEDIATE
+	DW sym_last
+	DW store
+	DW exit
+
 
 
 repeat_wait_init: EQU 45  ; 0.9s
