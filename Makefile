@@ -3,17 +3,14 @@ all: zenv.tap
 
 .PHONY: clean
 clean:
-	rm -f \
-		zenv-code.bin zenv-syms.bin zenv.bin zenv.lst \
-		zenv.tap zenv.wav stereo.wav
+	rm -f zenv.bin zenv.lst zenv.tap zenv.wav stereo.wav
 
 #zenv-unpadded.bin: zenv.asm
 zenv.bin: $(wildcard *.asm)
-	sjasmplus --nologo zenv.asm --lst=zenv.lst
-	cat zenv-code.bin zenv-syms.bin > $@
+	sjasmplus --nologo zenv.asm --lst=zenv.lst --raw=zenv.bin
 
 zenv.tap: zenv.bin
-	bin2tap -b -o $@ $<
+	bin2tap -b -cb 7 -cp 7 -ci 0 -o $@ $<
 
 zenv.wav: zenv.tap
 	tape2wav $< $@
