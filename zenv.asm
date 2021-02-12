@@ -2327,7 +2327,7 @@ u_dollar_dot:
 
 	; \ Empty data stack and perform QUIT
 	; ( --)
-	; : ABORT S0 SP! DROP QUIT ;
+	; : ABORT S0 SP! DROP QUIT ; -2 ALLOT
 	HEADER abort, "ABORT", 0
 abort:
 	CALL colon_code
@@ -2335,16 +2335,14 @@ abort:
 	DW sp_store
 	DW drop
 	DW quit
-	DW exit
 
 
-	; : (ABORT") TYPE ABORT ;
+	; : (ABORT") TYPE ABORT ; -2 ALLOT
 	HEADER abort_quote_raw, '(ABORT")', 0
 abort_quote_raw:
 	CALL colon_code
 	DW type
 	DW abort
-	DW exit
 
 
 	; : ALLOT ( n -- ) \ Add n to dictionary end pointer
@@ -4510,9 +4508,12 @@ semicolon:
 	DW abort_quote_raw
 .then:
 	; \ Make definition findable
-	; SYM-LAST ! ; IMMEDIATE
+	; SYM-LAST !
 	DW sym_last
 	DW store
+	; \ Return to interpreter mode
+	; POSTPONE [ ; IMMEDIATE
+	DW left_bracket
 	DW exit
 
 
@@ -4616,13 +4617,6 @@ repeat:
 	HEADER interpret, "INTERPRET", 0
 interpret:
 	CALL colon_code
-	; 0 STATE DUP @ >R !
-	DW zero_literal
-	DW state
-	DW dup
-	DW fetch
-	DW to_r
-	DW store
 	; BEGIN BL WORD DUP C@ WHILE
 .begin:
 	DW bl
@@ -4684,15 +4678,11 @@ interpret:
 .then3:
 		; THEN
 .then:
-	; REPEAT DROP
+	; REPEAT DROP ;
 	DW again_raw
 	DB .begin-$+256
 .repeat:
 	DW drop
-	; R> STATE ! ;
-	DW r_from
-	DW state
-	DW store
 	DW exit
 
 
@@ -4704,6 +4694,8 @@ quit:
 	DW r_zero
 	DW rp_store
 	DW cr
+	; POSTPONE [
+	DW left_bracket
 	; BEGIN
 .begin:
 		; -READ  0 >IN !  IN# !  'IN !  SPACE INTERPRET ." ok" CR
@@ -4723,10 +4715,9 @@ quit:
 		DM "ok"
 .s1e:
 		DW cr
-	; AGAIN ;
+	; AGAIN ; -2 ALLOT
 	DW again_raw
 	DB .begin-$+256
-	DW exit
 
 
 	; : EVALUATE ( ??? addr u -- ??? )
