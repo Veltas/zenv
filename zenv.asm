@@ -2196,7 +2196,7 @@ s_to_d:
 	HEADER dot, ".", 0
 dot:
 	CALL colon_code
-	; S>D D. \
+	; S>D D. ;
 	DW s_to_d
 	DW d_dot
 	DW exit
@@ -4645,12 +4645,18 @@ interpret:
 			DW if_raw
 			DB .else2-$-1
 				; IF
+				DW if_raw
+				DB .else4-$-1
 					; POSTPONE 2LITERAL
 					DW two_literal
 				; ELSE
+				DW else_skip
+				DB .then4-$-1
+.else4:
 					; POSTPONE LITERAL
 					DW literal
 				; THEN
+.then4:
 			; ELSE
 			DW else_skip
 			DB .then2-$-1
