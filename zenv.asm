@@ -4559,9 +4559,7 @@ then:
 	; : BEGIN HERE ; IMMEDIATE
 	HEADER begin, "BEGIN", 1
 begin:
-	CALL colon_code
-	DW here
-	DW exit
+	JP here
 
 
 	; ( dest --)
@@ -4609,6 +4607,88 @@ repeat:
 	CALL colon_code
 	DW again
 	DW then
+	DW exit
+
+
+	; ( -- dest false)
+	; : DO POSTPONE 2>R HERE FALSE ; IMMEDIATE
+	HEADER do, "DO", 1
+do:
+	CALL colon_code
+	DW literal_raw
+	DW two_to_r
+	DW compile_comma
+	DW here
+	DW false
+	DW exit
+
+
+	; ( -- dest true)
+	; : ?DO POSTPONE (?DO) 1 ALLOT HERE TRUE ; IMMEDIATE
+	HEADER question_do, "?DO", 1
+question_do:
+	CALL colon_code
+	DW literal_raw
+	DW question_do_raw
+	DW compile_comma
+	DW one_literal
+	DW allot
+	DW here
+	DW true
+	DW exit
+
+
+	; ( do-sys --)
+	; : LOOP
+	HEADER loop, "LOOP", 1
+loop:
+	CALL colon_code
+	; IF
+	DW if_raw
+	DB .else-$-1
+		; POSTPONE (LOOP)
+		DW literal_raw
+		DW loop_raw
+		DW compile_comma
+		; DUP HERE - C,
+		DW dup
+		DW here
+		DW minus
+		DW c_comma
+		; DUP 1- SWAP HERE SWAP - SWAP C!
+		DW dup
+		DW one_minus
+		DW swap
+		DW here
+		DW swap
+		DW minus
+		DW swap
+		DW c_store
+	; ELSE
+	DW else_skip
+	DB .then-$-1
+.else:
+		; POSTPONE (LOOP)
+		DW literal_raw
+		DW loop_raw
+		DW compile_comma
+		; HERE - C,
+		DW here
+		DW minus
+		DW c_comma
+	; THEN
+.then:
+	; ; IMMEDIATE
+	DW exit
+
+
+	; : I POSTPONE R@ ; IMMEDIATE
+	HEADER _i, "I", 1
+_i:
+	CALL colon_code
+	DW literal_raw
+	DW r_fetch
+	DW compile_comma
 	DW exit
 
 
