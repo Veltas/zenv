@@ -897,8 +897,8 @@ else_skip:
 	JP next
 
 
-	HEADER repeat_raw, "(REPEAT)", 0
-repeat_raw:
+	HEADER again_raw, "(AGAIN)", 0
+again_raw:
 	LD E, (IY+0)
 	LD D, 0xFF
 	ADD IY, DE
@@ -1060,11 +1060,6 @@ until_raw_next:
 until_raw_done:
 	INC IY
 	JR until_raw_next
-
-
-	HEADER again_raw, "(AGAIN)", 0
-again_raw:
-	JR until_raw_loop
 
 
 	HEADER equals, "=", 0
@@ -1643,7 +1638,7 @@ key:
 		DB .repeat-$-1
 		DW drop
 	; REPEAT
-	DW repeat_raw
+	DW again_raw
 	DB .begin-$+256
 .repeat:
 	; CLICK ;
@@ -2605,7 +2600,7 @@ accept:
 		DW drop
 .endcase:
 	; REPEAT
-	DW repeat_raw
+	DW again_raw
 	DB .begin-$+256
 .repeat:
 	; ( size idx ) ( R: buf )
@@ -2766,7 +2761,7 @@ interpret:
 		; THEN
 .then:
 	; REPEAT drop
-	DW repeat_raw
+	DW again_raw
 	DB .begin-$+256
 .repeat:
 	DW drop
@@ -2943,7 +2938,7 @@ parse:
 		DW one_plus
 		DW swap
 	; REPEAT THEN
-	DW repeat_raw
+	DW again_raw
 	DB .begin-$+256
 .repeat:
 	; DROP ;
@@ -2973,7 +2968,7 @@ pskip:
 		DW to_in
 		DW plus_store
 	; REPEAT THEN
-	DW repeat_raw
+	DW again_raw
 	DB .begin-$+256
 .then:
 	; DROP ;
@@ -3332,7 +3327,7 @@ number:
 			DW if_raw
 			DB .repeat-$-1
 		; REPEAT THEN
-		DW repeat_raw
+		DW again_raw
 		DB .begin-$+256
 .repeat:
 		; ( c-addr d-num addr)
@@ -4211,7 +4206,7 @@ du_slash_mod:
 		DW two_minus_rot
 		DW d_two_star
 	; REPEAT
-	DW repeat_raw
+	DW again_raw
 	DB .begin1-$+256
 .repeat1:
 
@@ -4673,6 +4668,100 @@ semicolon:
 	DW store
 	DW exit
 
+
+	; ( -- orig)
+	; : IF
+	HEADER _if, "IF", 1
+_if:
+	CALL colon_code
+	; POSTPONE (IF)
+	DW literal_raw
+	DW if_raw
+	DW compile_comma
+	; HERE
+	DW here
+	; ( orig)
+	; 1 ALLOT ; IMMEDIATE
+	DW one_literal
+	DW allot
+	DW exit
+
+
+	; ( orig --)
+	; : THEN DUP 1+ HERE SWAP - SWAP C! ; IMMEDIATE
+	HEADER then, "THEN", 1
+then:
+	CALL colon_code
+	; DUP 1+
+	; ( orig orig+1)
+	DW dup
+	DW one_plus
+	; HERE SWAP -
+	DW here
+	DW swap
+	DW minus
+	; ( orig jump-len)
+	; SWAP C! ; IMMEDAITE
+	DW swap
+	DW c_store
+	DW exit
+
+
+	; ( -- dest)
+	; : BEGIN HERE ; IMMEDIATE
+	HEADER begin, "BEGIN", 1
+begin:
+	CALL colon_code
+	DW here
+	DW exit
+
+
+	; ( dest --)
+	; : AGAIN POSTPONE (AGAIN) HERE - C, ; IMMEDIATE
+	HEADER again, "AGAIN", 1
+again:
+	CALL colon_code
+	DW literal_raw
+	DW again_raw
+	DW compile_comma
+	DW here
+	DW minus
+	DW c_comma
+	DW exit
+
+
+	; ( dest --)
+	; : UNTIL POSTPONE (UNTIL) HERE - C, ; IMMEDIATE
+	HEADER until, "UNTIL", 1
+until:
+	CALL colon_code
+	DW literal_raw
+	DW until_raw
+	DW compile_comma
+	DW here
+	DW minus
+	DW c_comma
+	DW exit
+
+
+	; ( dest -- orig dest)
+	; : WHILE POSTPONE IF SWAP ; IMMEDIATE
+	HEADER while, "WHILE", 1
+while:
+	CALL colon_code
+	DW _if
+	DW swap
+	DW exit
+
+
+	; ( orig dest --)
+	; : REPEAT POSTPONE AGAIN POSTPONE THEN ; IMMEDIATE
+	HEADER repeat, "REPEAT", 1
+repeat:
+	CALL colon_code
+	DW again
+	DW then
+	DW exit
 
 
 repeat_wait_init: EQU 45  ; 0.9s
