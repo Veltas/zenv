@@ -2693,159 +2693,6 @@ find:
 	JP next
 
 
-	; \ Interpret input buffer until empty
-	; : interpret ( ? -- ? )
-	HEADER interpret, "INTERPRET", 0
-interpret:
-	CALL colon_code
-	; 0 state dup @ >r !
-	DW zero_literal
-	DW state
-	DW dup
-	DW fetch
-	DW to_r
-	DW store
-	; BEGIN bl word dup c@ WHILE
-.begin:
-	DW bl
-	DW word
-	DW dup
-	DW c_fetch
-	DW if_raw
-	DB .repeat-$-1
-		; find
-		DW find
-		; ?dup 0= IF
-		DW question_dup
-		DW zero_equals
-		DW if_raw
-		DB .else-$-1
-			; number  state @  IF
-			DW number
-			DW state
-			DW fetch
-			DW if_raw
-			DB .else2-$-1
-				; IF
-					; POSTPONE 2LITERAL
-					DW two_literal
-				; ELSE
-					; POSTPONE LITERAL
-					DW literal
-				; THEN
-			; ELSE
-			DW else_skip
-			DB .then2-$-1
-.else2:
-				; DROP
-				DW drop
-			; THEN
-.then2:
-		; ELSE
-		DW else_skip
-		DB .then-$-1
-.else:
-			; 0<  state @  and  IF compile, ELSE execute THEN
-			DW zero_less
-			DW state
-			DW fetch
-			DW and
-			DW if_raw
-			DB .else3-$-1
-			DW compile_comma
-			DW else_skip
-			DB .then3-$-1
-.else3:
-			DW execute
-.then3:
-		; THEN
-.then:
-	; REPEAT drop
-	DW again_raw
-	DB .begin-$+256
-.repeat:
-	DW drop
-	; r> state ! \
-	DW r_from
-	DW state
-	DW store
-	DW exit
-
-
-	; : quit ( -- ) \ Reset return stack then start interpretation
-	HEADER quit, "QUIT", 0
-quit:
-	CALL colon_code
-	; r0 rp! cr
-	DW r_zero
-	DW rp_store
-	DW cr
-	; BEGIN
-.begin:
-		; -read  0 >in !  in# !  'in !  space interpret ." ok" cr
-		DW line_read
-		DW zero_literal
-		DW to_in
-		DW store
-		DW in_size
-		DW store
-		DW tick_in
-		DW store
-		DW space
-		DW interpret
-		DW dot_quote_raw
-		DB .s1e-.s1
-.s1:
-		DM "ok"
-.s1e:
-		DW cr
-	; AGAIN \
-	DW again_raw
-	DB .begin-$+256
-	DW exit
-
-
-	; : EVALUATE ( ??? addr u -- ??? )
-	HEADER evaluate, "EVALUATE", 0
-evaluate:
-	CALL colon_code
-	; \ Update input state to new addr, u, and save old state
-	; 0 >IN DUP @ >R !
-	DW zero_literal
-	DW to_in
-	DW dup
-	DW fetch
-	DW to_r
-	DW store
-	; IN# DUP @ >R !
-	DW in_size
-	DW dup
-	DW fetch
-	DW to_r
-	DW store
-	; 'IN DUP @ >R !
-	DW tick_in
-	DW dup
-	DW fetch
-	DW to_r
-	DW store
-	; \ Interpret code
-	; INTERPRET
-	DW interpret
-	; \ Restore input state
-	; R> 'IN !  R> IN# !  R> >IN ! \
-	DW r_from
-	DW tick_in
-	DW store
-	DW r_from
-	DW in_size
-	DW store
-	DW r_from
-	DW to_in
-	DW store
-	DW exit
-
-
 	; \ See next parse character or 0 if parse area empty
 	; : PPEEK ( -- c | 0 )
 	HEADER ppeek, "PPEEK", 0
@@ -4761,6 +4608,159 @@ repeat:
 	CALL colon_code
 	DW again
 	DW then
+	DW exit
+
+
+	; \ Interpret input buffer until empty
+	; : interpret ( ? -- ? )
+	HEADER interpret, "INTERPRET", 0
+interpret:
+	CALL colon_code
+	; 0 state dup @ >r !
+	DW zero_literal
+	DW state
+	DW dup
+	DW fetch
+	DW to_r
+	DW store
+	; BEGIN bl word dup c@ WHILE
+.begin:
+	DW bl
+	DW word
+	DW dup
+	DW c_fetch
+	DW if_raw
+	DB .repeat-$-1
+		; find
+		DW find
+		; ?dup 0= IF
+		DW question_dup
+		DW zero_equals
+		DW if_raw
+		DB .else-$-1
+			; number  state @  IF
+			DW number
+			DW state
+			DW fetch
+			DW if_raw
+			DB .else2-$-1
+				; IF
+					; POSTPONE 2LITERAL
+					DW two_literal
+				; ELSE
+					; POSTPONE LITERAL
+					DW literal
+				; THEN
+			; ELSE
+			DW else_skip
+			DB .then2-$-1
+.else2:
+				; DROP
+				DW drop
+			; THEN
+.then2:
+		; ELSE
+		DW else_skip
+		DB .then-$-1
+.else:
+			; 0<  state @  and  IF compile, ELSE execute THEN
+			DW zero_less
+			DW state
+			DW fetch
+			DW and
+			DW if_raw
+			DB .else3-$-1
+			DW compile_comma
+			DW else_skip
+			DB .then3-$-1
+.else3:
+			DW execute
+.then3:
+		; THEN
+.then:
+	; REPEAT drop
+	DW again_raw
+	DB .begin-$+256
+.repeat:
+	DW drop
+	; r> state ! \
+	DW r_from
+	DW state
+	DW store
+	DW exit
+
+
+	; : quit ( -- ) \ Reset return stack then start interpretation
+	HEADER quit, "QUIT", 0
+quit:
+	CALL colon_code
+	; r0 rp! cr
+	DW r_zero
+	DW rp_store
+	DW cr
+	; BEGIN
+.begin:
+		; -read  0 >in !  in# !  'in !  space interpret ." ok" cr
+		DW line_read
+		DW zero_literal
+		DW to_in
+		DW store
+		DW in_size
+		DW store
+		DW tick_in
+		DW store
+		DW space
+		DW interpret
+		DW dot_quote_raw
+		DB .s1e-.s1
+.s1:
+		DM "ok"
+.s1e:
+		DW cr
+	; AGAIN \
+	DW again_raw
+	DB .begin-$+256
+	DW exit
+
+
+	; : EVALUATE ( ??? addr u -- ??? )
+	HEADER evaluate, "EVALUATE", 0
+evaluate:
+	CALL colon_code
+	; \ Update input state to new addr, u, and save old state
+	; 0 >IN DUP @ >R !
+	DW zero_literal
+	DW to_in
+	DW dup
+	DW fetch
+	DW to_r
+	DW store
+	; IN# DUP @ >R !
+	DW in_size
+	DW dup
+	DW fetch
+	DW to_r
+	DW store
+	; 'IN DUP @ >R !
+	DW tick_in
+	DW dup
+	DW fetch
+	DW to_r
+	DW store
+	; \ Interpret code
+	; INTERPRET
+	DW interpret
+	; \ Restore input state
+	; R> 'IN !  R> IN# !  R> >IN ! \
+	DW r_from
+	DW tick_in
+	DW store
+	DW r_from
+	DW in_size
+	DW store
+	DW r_from
+	DW to_in
+	DW store
 	DW exit
 
 
