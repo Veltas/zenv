@@ -4841,6 +4841,25 @@ evaluate:
 	DW exit
 
 
+	; ( "...<quote>"--)
+	; : ."
+	HEADER dot_quote, ".\"", 1
+dot_quote:
+	CALL colon_code
+	; POSTPONE (.")
+	DW literal_raw
+	DW dot_quote_raw
+	DW compile_comma
+	; [CHAR] " PARSE
+	DW raw_char
+	DB '"'
+	DW parse
+	; ( addr u)
+	; CSTR, ;
+	DW cstr_comma
+	DW exit
+
+
 repeat_wait_init: EQU 45  ; 0.9s
 repeat_repeat_init: EQU 5 ; 0.1s
 
