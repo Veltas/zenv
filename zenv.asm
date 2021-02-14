@@ -3096,13 +3096,12 @@ to_number:
 	DW exit
 
 
-	; \ Type a counted string with question mark and abort
-	; ( c-addr --)
-	; : ABORT-TYPE COUNT TYPE ABORT" ?" ;
-	HEADER abort_type, "ABORT-TYPE", 0
-abort_type:
+	; \ Type a string with question mark and abort
+	; ( addr u --)
+	; : WHAT? TYPE ABORT" ?" ; -2 ALLOT
+	HEADER what_question, "WHAT?", 0
+what_question:
 	CALL colon_code
-	DW count
 	DW type
 	DW s_quote_raw
 	DB .s2-.s1
@@ -3110,7 +3109,16 @@ abort_type:
 	DM "?"
 .s2:
 	DW abort_quote_raw
-	DW exit
+
+
+	; \ Type a counted string with question mark and abort
+	; ( c-addr --)
+	; : CWHAT? COUNT WHAT? ; -2 ALLOT
+	HEADER cwhat_question, "CWHAT?", 0
+cwhat_question:
+	CALL colon_code
+	DW count
+	DW what_question
 
 
 	; \ Parse single or double number from counted string
@@ -3130,7 +3138,7 @@ number:
 	DW if_raw
 	DB .then_empty-$-1
 	DW drop
-	DW abort_type
+	DW cwhat_question
 .then_empty:
 	; \ Ignore first char addr/u if '-'
 	; OVER C@ [CHAR] - = IF
@@ -3155,7 +3163,7 @@ number:
 	DW if_raw
 	DB .then_empty2-$-1
 	DW drop
-	DW abort_type
+	DW cwhat_question
 .then_empty2:
 	; 0. 2SWAP
 	DW zero_literal
@@ -3183,7 +3191,7 @@ number:
 				; 2DROP 2DROP ABORT-TYPE
 				DW two_drop
 				DW two_drop
-				DW abort_type
+				DW cwhat_question
 			; THEN
 .then_bad:
 			; \ Advance char
@@ -4908,6 +4916,44 @@ s_quote:
 	; ( addr u)
 	; CSTR, ;
 	DW cstr_comma
+	DW exit
+
+
+	; ( "<spaces>name" -- xt)
+	; : '
+	HEADER tick, "'", 0
+tick:
+	CALL colon_code
+	; PARSE-NAME
+	DW parse_name
+	; ( addr u)
+	; SFIND
+	DW sfind
+	; ( addr u 0 | xt 1 | xt -1)
+	; ?DUP 0= IF
+	DW question_dup
+	DW zero_equals
+	DW if_raw
+	DB .then-$-1
+		; ( addr u)
+		; WHAT?
+		DW what_question
+	; THEN
+.then:
+	; ( xt 1 | xt -1)
+	; DROP ;
+	DW drop
+	DW exit
+
+
+	; ( "<spaces>name" --)
+	; ( -- xt) \ runtime
+	; : ['] ' POSTPONE LITERAL ; IMMEDIATE
+	HEADER bracket_tick, "[']", 1
+bracket_tick:
+	CALL colon_code
+	DW tick
+	DW literal
 	DW exit
 
 
