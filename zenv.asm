@@ -1312,6 +1312,30 @@ compare:
 	JP next
 
 
+	; ( n1 n2 -- d)
+	; CODE M*
+	HEADER m_star, "M*", 0
+m_star:
+	EX DE, HL
+	POP BC
+	LD HL, 0
+	LD A, 16
+.loop:
+	ADD HL, HL
+	RL E
+	RL D
+	JR NC, .skip
+	ADD HL, BC
+	JR NC, .skip
+	INC DE
+.skip:
+	DEC A
+	JR NZ, .loop
+	EX DE, HL
+	PUSH DE
+	JP next
+
+
 	; ( d n1 n2 -- d)
 	; CODE M*/
 	HEADER m_star_slash, "M*/", 0
