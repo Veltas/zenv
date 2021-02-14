@@ -2622,13 +2622,15 @@ line_read:
 	DW exit
 
 
-	; ( c-addr -- c-addr 0 | xt 1 | xt -1 )
-	; CODE FIND
-	HEADER find, "FIND", 0
-find:
-	PUSH HL
+	; ( addr u -- addr u 0 | xt 1 | xt -1 )
+	; CODE SFIND
+	HEADER sfind, "SFIND", 0
+sfind:
+	POP DE
+	DEC DE
+	PUSH DE
 	; B = size of name
-	LD B, (HL)
+	LD B, L
 	; Load first symbol
 	LD HL, (sym_last+3)
 	; Start loop
@@ -2688,7 +2690,37 @@ find:
 	OR L
 	JP NZ, .loop
 	; If loop falls through then no match is found
+	POP DE
+	INC DE
+	PUSH DE
+	LD E, B
+	LD D, 0
+	PUSH DE
 	JP next
+
+
+	; ( c-addr -- c-addr 0 | xt 1 | xt -1)
+	; : FIND
+	HEADER find, "FIND", 0
+find:
+	CALL colon_code
+	; COUNT SFIND
+	DW count
+	DW sfind
+	; ( addr u 0 | xt 1 | xt -1)
+	; ?DUP 0= IF
+	DW question_dup
+	DW zero_equals
+	DW if_raw
+	DB .then-$-1
+		; ( addr u)
+		; DROP 1- 0
+		DW drop
+		DW one_minus
+		DW zero_literal
+	; THEN ;
+.then:
+	DW exit
 
 
 	; \ See next parse character or 0 if parse area empty
