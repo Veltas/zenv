@@ -427,6 +427,14 @@ r_fetch:
 	JP next
 
 
+	HEADER i_tick, "I'", 0
+i_tick:
+	PUSH HL
+	LD L, (IX+2)
+	LD H, (IX+3)
+	JP next
+
+
 	HEADER two_r_fetch, "2R@", 0
 two_r_fetch:
 	PUSH HL
@@ -674,8 +682,8 @@ rp_store:
 	JP next
 
 
-	HEADER abs, "ABS", 0
-abs:
+	HEADER _abs, "ABS", 0
+_abs:
 	LD A, H
 	AND 0x80
 	JP Z, next
@@ -1395,6 +1403,47 @@ m_star_slash:
 	; Restore IY, result MSB in HL, result LSB on stack
 .end:
 	EX (SP), IY
+	JP next
+
+
+	; ( ud u -- urem uquo)
+	; CODE UM/MOD
+	HEADER um_slash_mod, "UM/MOD", 0
+um_slash_mod:
+	EX DE, HL
+	POP BC
+	EX (SP), IY
+	; BCIY = numerator
+	; HL = remainder
+	; DE = denominator
+	LD HL, 0
+	LD A, 32
+.loop:
+	ADD IY, IY
+	RL C
+	RL B
+	ADC HL, HL
+	JR NC, .skip3
+	OR A
+	SBC HL, DE
+	INC IY
+	JR .skip2
+.skip3:
+	SBC HL, DE
+	JR C, .skip
+	INC IY
+	JP .skip2
+.skip:
+	ADD HL, DE
+.skip2:
+	DEC A
+	JP NZ, .loop
+	; IY = quotient
+	; HL = remainder
+	EX (SP), IY
+	EX DE, HL
+	POP HL
+	PUSH DE
 	JP next
 
 
@@ -4075,115 +4124,6 @@ d_zero_equals:
 	DW exit
 
 
-	; \ Divide and produce remainder in double integers
-	; : DU/MOD ( ud1 ud2 -- ud3 ud4 ) \ Where ud1 is numerator, ud2 is
-	;                                 \ denominator, ud3 is result, ud4 is
-	;                                 \ remainder.
-	HEADER du_slash_mod, "DU/MOD", 0
-du_slash_mod:
-	CALL colon_code
-	; \ Refuse to divide by 0
-	; \ TODO 2DUP D0= IF ABORT" Div by 0" THEN
-	; 1. 2-ROT
-	DW one_literal
-	DW zero_literal
-	DW two_minus_rot
-	; ( rem den unit )
-	; \ Shift den and unit, while den smaller than rem,
-	; \ and until before den overflows.
-	; BEGIN 2OVER 2OVER 2SWAP DU< IF 2DUP D0< INVERT ELSE FALSE THEN WHILE
-.begin1:
-	DW two_over
-	DW two_over
-	DW two_swap
-	DW du_less_than
-	DW if_raw
-	DB .else-$-1
-	DW two_dup
-	DW d_zero_less
-	DW invert
-	DW else_skip
-	DB .then2-$-1
-.else:
-	DW zero_literal
-.then2:
-	DW if_raw
-	DB .repeat1-$-1
-		; 2ROT D2* 2-ROT D2*
-		DW two_rot
-		DW d_two_star
-		DW two_minus_rot
-		DW d_two_star
-	; REPEAT
-	DW again_raw
-	DB .begin1-$+256
-.repeat1:
-
-	; 0. 2>R  2SWAP
-	DW zero_literal
-	DW zero_literal
-	DW two_to_r
-	DW two_swap
-	; ( unit div rem ) ( R:result )
-	; BEGIN
-.begin2:
-		; \ If remainder at least divisor, sub and OR unit to result
-		; 2OVER 2OVER 2SWAP DU< INVERT IF
-		DW two_over
-		DW two_over
-		DW two_swap
-		DW du_less_than
-		DW invert
-		DW if_raw
-		DB .then-$-1
-			; 2OVER D-
-			DW two_over
-			DW d_minus
-			; 2ROT 2DUP 2R> 2OR 2>R 2-ROT
-			DW two_rot
-			DW two_dup
-			DW two_r_from
-			DW two_or
-			DW two_to_r
-			DW two_minus_rot
-		; THEN
-.then:
-
-		; \ Shift right each step until divisor gone
-		; 2ROT DU2/ 2ROT DU2/ 2ROT
-		DW two_rot
-		DW du_two_slash
-		DW two_rot
-		DW du_two_slash
-		DW two_rot
-	; 2OVER2 D0= UNTIL
-	DW two_over_two
-	DW d_zero_equals
-	DW until_raw
-	DB .begin2-$+256
-
-	; \ Return result + remainder
-	; 2-ROT 2DROP 2DROP 2R> 2SWAP \
-	DW two_minus_rot
-	DW two_drop
-	DW two_drop
-	DW two_r_from
-	DW two_swap
-	DW exit
-
-
-	; : UM/MOD ( ud u1 -- u2 u3 ) \ Divide by u1, quo u2 rem u3
-	HEADER um_slash_mod, "UM/MOD", 0
-um_slash_mod:
-	CALL colon_code
-	; 0 DU/MOD DROP NIP \
-	DW zero_literal
-	DW du_slash_mod
-	DW drop
-	DW nip
-	DW exit
-
-
 	; : TONE  ( len period -- ) \ Make an accurate tone, masking interrupts
 	HEADER tone, "TONE", 0
 tone:
@@ -4978,6 +4918,94 @@ bracket_tick:
 	CALL colon_code
 	DW tick
 	DW literal
+	DW exit
+
+
+	; ( d -- d)
+	; : DABS
+	HEADER dabs, "DABS", 0
+dabs:
+	CALL colon_code
+	; DUP 0< IF
+	DW dup
+	DW zero_less
+	DW if_raw
+	DB .then-$-1
+		; 0. 2SWAP D-
+		DW zero_literal
+		DW zero_literal
+		DW two_swap
+		DW d_minus
+	; THEN ;
+.then:
+	DW exit
+
+
+	; ( d n -- rem quo)
+	; : SM/REM
+	HEADER sm_slash_rem, "SM/REM", 0
+sm_slash_rem:
+	CALL colon_code
+	; \ retain signs
+	; 2DUP 2>R
+	DW two_dup
+	DW two_to_r
+	; ( R: d-high n)
+	; \ absolute values
+	; -ROT DABS ROT ABS
+	DW minus_rot
+	DW dabs
+	DW rot
+	DW _abs
+	; \ perform unsigned div
+	; UM/MOD SWAP
+	DW um_slash_mod
+	DW swap
+	; ( uquo urem)
+	; \ remainder has sign of d
+	; I' 0< IF NEGATE THEN
+	DW i_tick
+	DW zero_less
+	DW if_raw
+	DB .then1-$-1
+	DW negate
+.then1:
+	; SWAP
+	DW swap
+	; ( urem uquo)
+	; \ quo sign is sign1*sign2
+	; 2R> 0< SWAP 0< <> IF NEGATE THEN ;
+	DW two_r_from
+	DW zero_less
+	DW swap
+	DW zero_less
+	DW not_equals
+	DW if_raw
+	DB .then2-$-1
+	DW negate
+.then2:
+	DW exit
+
+
+	; ( x m d -- r q)
+	; : */MOD -ROT M* ROT SM/REM ;
+	HEADER star_slash_mod, "*/MOD", 0
+star_slash_mod:
+	CALL colon_code
+	DW minus_rot
+	DW m_star
+	DW rot
+	DW sm_slash_rem
+	DW exit
+
+
+	; ( x m d -- q)
+	; : */ */MOD NIP ;
+	HEADER star_slash, "*/", 0
+star_slash:
+	CALL colon_code
+	DW star_slash_mod
+	DW nip
 	DW exit
 
 
