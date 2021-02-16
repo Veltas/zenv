@@ -1321,9 +1321,9 @@ compare:
 
 
 	; ( n1 n2 -- d)
-	; CODE M*
-	HEADER m_star, "M*", 0
-m_star:
+	; CODE UM*
+	HEADER um_star, "UM*", 0
+um_star:
 	EX DE, HL
 	POP BC
 	LD HL, 0
@@ -1345,9 +1345,9 @@ m_star:
 
 
 	; ( d n1 n2 -- d)
-	; CODE M*/
-	HEADER m_star_slash, "M*/", 0
-m_star_slash:
+	; CODE UM*/
+	HEADER um_star_slash, "UM*/", 0
+um_star_slash:
 	POP BC
 	POP DE
 	POP AF
@@ -2549,9 +2549,8 @@ negate:
 	HEADER dnegate, "DNEGATE", 0
 dnegate:
 	CALL colon_code
-	DW two_literal_raw
-	DW 0
-	DW 0
+	DW zero_literal
+	DW zero_literal
 	DW two_swap
 	DW d_minus
 	DW exit
@@ -5006,6 +5005,77 @@ star_slash:
 	CALL colon_code
 	DW star_slash_mod
 	DW nip
+	DW exit
+
+
+	; ( n1 n2 -- d)
+	; HEX : M*
+	HEADER m_star, "M*", 0
+m_star:
+	CALL colon_code
+	; 2DUP
+	DW two_dup
+	; ( n1 n2 n1 n2)
+	; XOR 0< -ROT
+	DW xor
+	DW zero_less
+	DW minus_rot
+	; ( sign n1 n2)
+	; SWAP ABS SWAP ABS
+	DW swap
+	DW _abs
+	DW swap
+	DW _abs
+	; ( sign an1 an2)
+	; UM*
+	DW um_star
+	; ( sign ad)
+	; ROT IF DNEGATE THEN
+	DW rot
+	DW if_raw
+	DB .then-$-1
+	DW dnegate
+.then:
+	; ;
+	DW exit
+
+
+	; ( d n1 n2 -- d)
+	; : M*/
+	HEADER m_star_slash, "M*/", 0
+m_star_slash:
+	CALL colon_code
+	; ( dl dh n1 n2)
+	; -ROT 2DUP
+	DW minus_rot
+	DW two_dup
+	; ( dl n2 dh n1 dh n1)
+	; XOR 0<
+	DW xor
+	DW zero_less
+	; ( dl n2 dh n1 sign)
+	; >R
+	DW to_r
+	; ( dl n2 dh n1) ( R:sign)
+	; ABS ROT
+	DW _abs
+	DW rot
+	; ( dl dh an1 n2)
+	; 2SWAP DABS 2SWAP
+	DW two_swap
+	DW dabs
+	DW two_swap
+	; ( ad an1 n2)
+	; UM*/
+	DW um_star_slash
+	; ( ad2)
+	; R> IF DNEGATE THEN
+	DW r_from
+	DW if_raw
+	DB .then-$-1
+	DW dnegate
+.then:
+	; ;
 	DW exit
 
 
