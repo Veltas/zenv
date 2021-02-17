@@ -4685,6 +4685,27 @@ loop:
 	DW exit
 
 
+	; ( do-sys --)
+	; : +LOOP
+	HEADER plus_loop, "+LOOP", 1
+plus_loop:
+	CALL colon_code
+	; HERE -ROT
+	DW here
+	DW minus_rot
+	; ( addr do-sys)
+	; POSTPONE LOOP
+	DW loop
+	; ( addr)
+	; ['] (+LOOP) SWAP !
+	DW literal_raw
+	DW plus_loop_raw
+	DW swap
+	DW store
+	; ; IMMEDIATE
+	DW exit
+
+
 	; : I POSTPONE R@ ; IMMEDIATE
 	HEADER _i, "I", 1
 _i:
