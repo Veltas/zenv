@@ -5128,6 +5128,36 @@ m_star_slash:
 	DW exit
 
 
+	; ( n1 n2 -- n3)
+	; : /
+	HEADER slash, "/", 0
+slash:
+	CALL colon_code
+	; 2DUP XOR 0< -ROT
+	DW two_dup
+	DW xor
+	DW zero_less
+	DW minus_rot
+	; ( neg? n1 n2)
+	; SWAP ABS SWAP ABS
+	DW swap
+	DW _abs
+	DW swap
+	DW _abs
+	; ( neg? u1 u2)
+	; U/
+	DW u_slash
+	; ( neg? u3)
+	; SWAP IF NEGATE THEN ;
+	DW swap
+	DW if_raw
+	DB .then-$-1
+	DW negate
+.then:
+	DW exit
+
+
+
 repeat_wait_init: EQU 45  ; 0.9s
 repeat_repeat_init: EQU 5 ; 0.1s
 
