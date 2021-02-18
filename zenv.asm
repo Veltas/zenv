@@ -1447,6 +1447,34 @@ um_slash_mod:
 	JP next
 
 
+	; ( n1 n2 -- n3)
+	; CODE U/
+	HEADER u_slash, "U/", 0
+u_slash:
+	EX DE, HL
+	POP BC
+	LD A, 16
+	LD HL, 0
+	JP .loop_entry
+.loop_and_add:
+	ADD HL, DE
+.loop:
+	DEC A
+	JP Z, .end
+.loop_entry:
+	SLA C
+	RL B
+	ADC HL, HL
+	SBC HL, DE
+	JR C, .loop_and_add
+	INC C
+	JP .loop
+.end:
+	LD L, C
+	LD H, B
+	JP next
+
+
 	; : > SWAP < ;
 	HEADER greater_than, ">", 0
 greater_than:
