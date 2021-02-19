@@ -2439,12 +2439,28 @@ abort:
 	DW quit
 
 
-	; : (ABORT") TYPE ABORT ; -2 ALLOT
+	; ( flags --)
+	; : (ABORT")
 	HEADER abort_quote_raw, '(ABORT")', 0
 abort_quote_raw:
 	CALL colon_code
+	; R> COUNT ROT
+	DW r_from
+	DW count
+	DW rot
+	; ( addr u cond)
+	; IF TYPE ABORT THEN
+	DW if_raw
+	DB .then-$-1
 	DW type
 	DW abort
+.then:
+	; ( addr u)
+	; + >R
+	DW plus
+	DW to_r
+	; ;
+	DW exit
 
 
 	; : ALLOT ( n -- ) \ Add n to dictionary end pointer
@@ -2991,20 +3007,16 @@ cparse:
 	; PARSE
 	DW parse
 	; ( addr u)
-	; DUP 256 >= IF ABORT" long name" THEN
+	; DUP 256 >= ABORT" long name"
 	DW dup
 	DW literal_raw
 	DW 256
 	DW greater_than_or_equal
-	DW if_raw
-	DB .then-$-1
-	DW s_quote_raw
+	DW abort_quote_raw
 	DB .e1-.s1
 .s1:
 	DM "long name"
 .e1:
-	DW abort_quote_raw
-.then:
 	; TUCK
 	DW tuck
 	; ( u addr u)
@@ -3199,17 +3211,17 @@ to_number:
 
 	; \ Type a string with question mark and abort
 	; ( addr u --)
-	; : WHAT? TYPE ABORT" ?" ; -2 ALLOT
+	; : WHAT? TYPE TRUE ABORT" ?" ; -2 ALLOT
 	HEADER what_question, "WHAT?", 0
 what_question:
 	CALL colon_code
 	DW type
-	DW s_quote_raw
+	DW true
+	DW abort_quote_raw
 	DB .s2-.s1
 .s1:
 	DM "?"
 .s2:
-	DW abort_quote_raw
 
 
 	; \ Type a counted string with question mark and abort
@@ -4381,33 +4393,25 @@ sym_comma:
 	DW parse_name
 	; ( str-addr str-u)
 	; \ Must be non-empty
-	; DUP 0= IF ABORT" missing name" THEN
+	; DUP 0= ABORT" missing name"
 	DW dup
 	DW zero_equals
-	DW if_raw
-	DB .then-$-1
-	DW s_quote_raw
+	DW abort_quote_raw
 	DB .e1-.s1
 .s1:
 	DM "missing name"
 .e1:
-	DW abort_quote_raw
-.then:
 	; \ Must be smaller than 64 chars
-	; DUP 64 >= IF ABORT" long name" THEN
+	; DUP 64 >= ABORT" long name"
 	DW dup
 	DW raw_char
 	DB 64
 	DW greater_than_or_equal
-	DW if_raw
-	DB .then2-$-1
-	DW s_quote_raw
+	DW abort_quote_raw
 	DB .e2-.s2
 .s2:
 	DM "long name"
 .e2:
-	DW abort_quote_raw
-.then2:
 	; \ Compile counted string
 	; CSTR, ;
 	DW cstr_comma
@@ -4525,20 +4529,16 @@ semicolon:
 	DW exit
 	DW compile_comma
 	; \ Check stack depth
-	; DEPTH :DEPTH @ <> IF ABORT" unbalanced" THEN
+	; DEPTH :DEPTH @ <> ABORT" unbalanced"
 	DW depth
 	DW colon_depth
 	DW fetch
 	DW not_equals
-	DW if_raw
-	DB .then-$-1
-	DW s_quote_raw
+	DW abort_quote_raw
 	DB .e1-.s1
 .s1:
 	DM "unbalanced"
 .e1:
-	DW abort_quote_raw
-.then:
 	; \ Make definition findable
 	; SYM-LAST !
 	DW sym_last
