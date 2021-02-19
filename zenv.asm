@@ -691,22 +691,23 @@ _abs:
 	LD HL, 0
 	OR A
 	SBC HL, DE
+.next:
 	JP next
 
 
 	HEADER align, "ALIGN", 1
 align:
-	JP next
+	JR _abs.next
 
 
 	HEADER aligned, "ALIGNED", 1
 aligned:
-	JP next
+	JR _abs.next
 
 
 	HEADER chars, "CHARS", 1
 chars:
-	JP next
+	JR _abs.next
 
 
 	HEADER cell_plus, "CELL+", 0
