@@ -68,8 +68,8 @@ this_header = $
 	JP main
 
 
-; CALL <does-code> in instance code
-; CALL colon_code in <does-code>
+; CALL <does> in instance code
+; CALL does_code in <does>
 does_code:
 	POP AF
 	POP DE
@@ -5276,6 +5276,31 @@ constant:
 	DW literal_raw
 	DW constant_code
 	DW instead
+	DW exit
+
+
+	; : (DOES)
+	HEADER does_raw, "(DOES)", 0
+does_raw:
+	CALL colon_code
+	; R> INSTEAD ;
+	DW r_from
+	DW instead
+	DW exit
+
+
+	; : DOES>
+	HEADER does, "DOES>", 1
+does:
+	CALL colon_code
+	; POSTPONE (DOES)
+	DW literal_raw
+	DW does_raw
+	DW compile_comma
+	; ??? CALL ;
+	DW literal_raw
+	DW does_code
+	DW _call
 	DW exit
 
 
