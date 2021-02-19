@@ -5177,6 +5177,18 @@ slash:
 	DW exit
 
 
+	; ( xt -- data-addr)
+	; : >BODY
+	HEADER to_body, ">BODY", 0
+to_body:
+	CALL colon_code
+	; 3 + ;
+	DW raw_char
+	DB 3
+	DW plus
+	DW exit
+
+
 repeat_wait_init: EQU 45  ; 0.9s
 repeat_repeat_init: EQU 5 ; 0.1s
 
