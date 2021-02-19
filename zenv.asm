@@ -1714,7 +1714,7 @@ words:
 		; \ Goto next symbol
 		; @
 		DW fetch
-	; ?DUP 0= UNTIL DROP
+	; ?DUP 0= UNTIL
 	DW question_dup
 	DW zero_equals
 	DW until_raw
