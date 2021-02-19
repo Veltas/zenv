@@ -5248,6 +5248,25 @@ bracket_char:
 	DW exit
 
 
+	; ( x "name " --)
+	; : CONSTANT
+	HEADER constant, "CONSTANT", 0
+constant:
+	CALL colon_code
+	; CREATE
+	DW create
+	; ???  HERE CELL -  !
+	DW literal_raw
+	DW constant_code
+	DW here
+	DW cell
+	DW minus
+	DW store
+	; , ;
+	DW comma
+	DW exit
+
+
 repeat_wait_init: EQU 45  ; 0.9s
 repeat_repeat_init: EQU 5 ; 0.1s
 
