@@ -5229,6 +5229,24 @@ char:
 	DW exit
 
 
+	; ( "name " --)
+	; ( -- c) \ runtime
+	; : [CHAR]
+	HEADER bracket_char, "[CHAR]", 1
+bracket_char:
+	CALL colon_code
+	; CHAR
+	DW char
+	; ( c)
+	; POSTPONE (CHAR)
+	DW literal_raw
+	DW raw_char
+	DW compile_comma
+	; C, ;
+	DW c_comma
+	DW exit
+
+
 repeat_wait_init: EQU 45  ; 0.9s
 repeat_repeat_init: EQU 5 ; 0.1s
 
