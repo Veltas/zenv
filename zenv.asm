@@ -1447,10 +1447,10 @@ um_slash_mod:
 	JP next
 
 
-	; ( n1 n2 -- n3)
-	; CODE U/
-	HEADER u_slash, "U/", 0
-u_slash:
+	; ( num den -- rem quo)
+	; CODE U/MOD
+	HEADER u_slash_mod, "U/MOD", 0
+u_slash_mod:
 	EX DE, HL
 	POP BC
 	LD A, 16
@@ -1470,6 +1470,7 @@ u_slash:
 	INC C
 	JP .loop
 .end:
+	PUSH HL
 	LD L, C
 	LD H, B
 	JP next
@@ -5022,12 +5023,10 @@ sm_slash_rem:
 	DW swap
 	; ( urem uquo)
 	; \ quo sign is sign1*sign2
-	; 2R> 0< SWAP 0< <> IF NEGATE THEN ;
+	; 2R> XOR 0< IF NEGATE THEN ;
 	DW two_r_from
+	DW xor
 	DW zero_less
-	DW swap
-	DW zero_less
-	DW not_equals
 	DW if_raw
 	DB .then2-$-1
 	DW negate
@@ -5128,34 +5127,54 @@ m_star_slash:
 	DW exit
 
 
-	; ( n1 n2 -- n3)
-	; : /
-	HEADER slash, "/", 0
-slash:
+	; ( num den -- rem quo)
+	; : /MOD
+	HEADER slash_mod, "/MOD", 0
+slash_mod:
 	CALL colon_code
-	; 2DUP XOR 0< -ROT
+	; 2DUP 2>R
 	DW two_dup
-	DW xor
-	DW zero_less
-	DW minus_rot
-	; ( neg? n1 n2)
+	DW two_to_r
+	; ( n d) ( R: n d)
 	; SWAP ABS SWAP ABS
 	DW swap
 	DW _abs
 	DW swap
 	DW _abs
-	; ( neg? u1 u2)
-	; U/
-	DW u_slash
-	; ( neg? u3)
-	; SWAP IF NEGATE THEN ;
+	; ( un ud)
+	; U/MOD
+	DW u_slash_mod
+	; ( ur uq)
+	; SWAP I' 0< IF NEGATE THEN
 	DW swap
+	DW i_tick
+	DW zero_less
 	DW if_raw
 	DB .then-$-1
 	DW negate
 .then:
+	; ( uq r)
+	; SWAP 2R> XOR 0< IF NEGATE THEN ;
+	DW swap
+	DW two_r_from
+	DW xor
+	DW zero_less
+	DW if_raw
+	DB .then2-$-1
+	DW negate
+.then2:
 	DW exit
 
+
+	; ( num den -- quo)
+	; : /
+	HEADER slash, "/", 0
+slash:
+	CALL colon_code
+	; /MOD NIP ;
+	DW slash_mod
+	DW nip
+	DW exit
 
 
 repeat_wait_init: EQU 45  ; 0.9s
