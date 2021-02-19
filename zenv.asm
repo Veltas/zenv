@@ -5248,22 +5248,34 @@ bracket_char:
 	DW exit
 
 
+	; \ Make last defined symbol call/jump to xt instead
+	; ( xt --)
+	; : INSTEAD
+	HEADER instead, "INSTEAD", 0
+instead:
+	CALL colon_code
+	; SYM-LAST @ >SYM + 1+ ! ;
+	DW sym_last
+	DW fetch
+	DW to_sym
+	DW plus
+	DW one_plus
+	DW store
+	DW exit
+
+
 	; ( x "name " --)
 	; : CONSTANT
 	HEADER constant, "CONSTANT", 0
 constant:
 	CALL colon_code
-	; CREATE
+	; CREATE ,
 	DW create
-	; ???  HERE CELL -  !
+	DW comma
+	; ??? INSTEAD ;
 	DW literal_raw
 	DW constant_code
-	DW here
-	DW cell
-	DW minus
-	DW store
-	; , ;
-	DW comma
+	DW instead
 	DW exit
 
 
