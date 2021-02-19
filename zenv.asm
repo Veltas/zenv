@@ -5207,6 +5207,28 @@ abort_quote:
 	DW exit
 
 
+	; ( "name " -- c)
+	; : CHAR
+	HEADER char, "CHAR", 0
+char:
+	CALL colon_code
+	; PARSE-NAME
+	DW parse_name
+	; ( addr u)
+	; DUP 0= ABORT" expect char"
+	DW dup
+	DW zero_equals
+	DW abort_quote_raw
+	DB .e1-.s1
+.s1:
+	DM "expect char"
+.e1:
+	; DROP C@ ;
+	DW drop
+	DW c_fetch
+	DW exit
+
+
 repeat_wait_init: EQU 45  ; 0.9s
 repeat_repeat_init: EQU 5 ; 0.1s
 
