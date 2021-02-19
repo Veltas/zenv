@@ -4588,6 +4588,27 @@ then:
 	DW exit
 
 
+	; : ELSE
+	HEADER _else, "ELSE", 1
+_else:
+	CALL colon_code
+	; POSTPONE (ELSE)
+	DW literal_raw
+	DW else_skip
+	DW compile_comma
+	; HERE
+	DW here
+	; ( orig)
+	; 1 ALLOT
+	DW one_literal
+	DW allot
+	; SWAP POSTPONE THEN
+	DW swap
+	DW then
+	; ; IMMEDIATE
+	DW exit
+
+
 	; ( -- dest)
 	; : BEGIN HERE ; IMMEDIATE
 	HEADER begin, "BEGIN", 1
