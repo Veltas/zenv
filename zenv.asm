@@ -5325,6 +5325,50 @@ does:
 	DW exit
 
 
+	; : FM/MOD
+	HEADER fm_slash_mod, "FM/MOD", 0
+fm_slash_mod:
+	CALL colon_code
+	; SM/REM
+	DW sm_slash_rem
+	; ( rem quo)
+	; OVER IF DUP 0< IF
+	DW over
+	DW if_raw
+	DB .then-$-1
+	DW dup
+	DW zero_less
+	DW if_raw
+	DB .then-$-1
+		; SWAP
+		DW swap
+		; ( quo rem)
+		; DUP 0< IF
+		DW dup
+		DW zero_less
+		DW if_raw
+		DB .else2-$-1
+			; 1- NEGATE
+			DW one_minus
+			DW negate
+		; ELSE
+		DW else_skip
+		DB .then2-$-1
+.else2:
+			; NEGATE 1-
+			DW negate
+			DW one_minus
+		; THEN
+.then2:
+		; SWAP 1-
+		DW swap
+		DW one_minus
+		; ( rem quo)
+	; THEN THEN ;
+.then:
+	DW exit
+
+
 repeat_wait_init: EQU 45  ; 0.9s
 repeat_repeat_init: EQU 5 ; 0.1s
 
