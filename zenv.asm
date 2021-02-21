@@ -1901,18 +1901,16 @@ literal:
 	DW if_raw
 	DB .else-$-1
 		; POSTPONE (CHAR) C,
-		DW literal_raw
+		DW postpone_raw
 		DW raw_char
-		DW compile_comma
 		DW c_comma
 	; ELSE
 	DW else_skip
 	DB .then-$-1
 .else:
 		; POSTPONE (LITERAL) ,
+		DW postpone_raw
 		DW literal_raw
-		DW literal_raw
-		DW compile_comma
 		DW comma
 	; THEN ;
 .then:
@@ -1932,20 +1930,17 @@ two_literal:
 	DB .else-$-1
 		; 2DROP POSTPONE 0 POSTPONE 0
 		DW two_drop
-		DW literal_raw
+		DW postpone_raw
 		DW zero_literal
-		DW compile_comma
-		DW literal_raw
+		DW postpone_raw
 		DW zero_literal
-		DW compile_comma
 	; ELSE
 	DW else_skip
 	DB .then-$-1
 .else:
 		; POSTPONE (2LITERAL)
-		DW literal_raw
+		DW postpone_raw
 		DW two_literal_raw
-		DW compile_comma
 		; SWAP , ,
 		DW swap
 		DW comma
@@ -4574,9 +4569,8 @@ semicolon:
 	CALL colon_code
 	; \ Current code exits if not already
 	; POSTPONE EXIT
-	DW literal_raw
+	DW postpone_raw
 	DW exit
-	DW compile_comma
 	; \ Check stack depth
 	; DEPTH :DEPTH @ <> ABORT" unbalanced"
 	DW depth
@@ -4604,9 +4598,8 @@ semicolon:
 _if:
 	CALL colon_code
 	; POSTPONE (IF)
-	DW literal_raw
+	DW postpone_raw
 	DW if_raw
-	DW compile_comma
 	; HERE
 	DW here
 	; ( orig)
@@ -5430,6 +5423,69 @@ immediate:
 	DW c_store
 	; ( )
 	; ; DECIMAL
+	DW exit
+
+
+	; \ Compile literal xt
+	; : (PP)
+	HEADER postpone_raw, "(PP)", 0
+postpone_raw:
+	CALL colon_code
+	; R>
+	DW r_from
+	; ( addr)
+	; DUP @
+	DW dup
+	DW fetch
+	; ( addr xt)
+	; COMPILE,
+	DW compile_comma
+	; ( addr)
+	; CELL+ >R ;
+	DW cell_plus
+	DW to_r
+	DW exit
+
+
+	; \ Compile compilation semantics of name
+	; ( " name" --)
+	; : POSTPONE
+	HEADER postpone, "POSTPONE", 1
+postpone:
+	CALL colon_code
+	; PARSE-NAME SFIND
+	DW parse_name
+	DW sfind
+	; ( addr u 0 | xt 1 | xt -1)
+	; ?DUP 0= IF WHAT? THEN
+	DW question_dup
+	DW zero_equals
+	DW if_raw
+	DB .then-$-1
+	DW what_question
+.then:
+	; ( imm-xt 1 | xt -1)
+	; 0< IF
+	DW zero_less
+	DW if_raw
+	DB .else2-$-1
+		; ( xt)
+		; POSTPONE (PP)
+		DW postpone_raw
+		DW postpone_raw
+		; ,
+		DW comma
+		; ( )
+	; ELSE
+	DW else_skip
+	DB .then2-$-1
+.else2:
+		; ( imm-xt)
+		; COMPILE,
+		DW compile_comma
+		; ( )
+	; THEN ;
+.then2:
 	DW exit
 
 
