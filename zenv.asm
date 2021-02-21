@@ -435,16 +435,27 @@ i_tick:
 	JP next
 
 
-	HEADER _j, "J", 0
-j:
+	HEADER i_leave, "I>", 0
+i_leave:
 	PUSH HL
 	LD L, (IX+4)
 	LD H, (IX+5)
 	JP next
 
 
-	HEADER j_tick, "J'", 0
-j_tick:
+	HEADER leave, "LEAVE", 0
+leave:
+	LD E, (IX+4)
+	LD D, (IX+5)
+	PUSH DE
+	POP IY
+	LD DE, 6
+	ADD IX, DE
+	JP next
+
+
+	HEADER _j, "J", 0
+j:
 	PUSH HL
 	LD L, (IX+6)
 	LD H, (IX+7)
@@ -454,16 +465,8 @@ j_tick:
 	HEADER _k, "K", 0
 _k:
 	PUSH HL
-	LD L, (IX+8)
-	LD H, (IX+9)
-	JP next
-
-
-	HEADER k_tick, "K'", 0
-k_tick:
-	PUSH HL
-	LD L, (IX+10)
-	LD H, (IX+11)
+	LD L, (IX+12)
+	LD H, (IX+13)
 	JP next
 
 
@@ -521,6 +524,57 @@ two_to_r:
 	LD (IX+2), E
 	LD (IX+3), D
 	POP HL
+	JP next
+
+
+	HEADER do_raw, "(DO)", 0
+do_raw:
+	POP DE
+.common:
+	LD BC, -6
+	ADD IX, BC
+	LD (IX+0), L
+	LD (IX+1), H
+	LD (IX+2), E
+	LD (IX+3), D
+	PUSH IY
+	INC IY
+	POP HL
+	LD E, (HL)
+	LD D, 0
+	INC HL
+	ADD HL, DE
+	LD (IX+4), L
+	LD (IX+5), H
+	POP HL
+	JP next
+
+
+	HEADER question_do_raw, "(?DO)", 0
+question_do_raw:
+	POP DE
+	OR A
+	SBC HL, DE
+	JR NZ, .not_equal
+	PUSH IY
+	POP HL
+	LD E, (HL)
+	LD D, 0
+	INC HL
+	ADD HL, DE
+	PUSH HL
+	POP IY
+	POP HL
+	JP next
+.not_equal:
+	ADD HL, DE
+	JR do_raw.common
+
+
+	HEADER unloop, "UNLOOP", 0
+unloop:
+	LD DE, 6
+	ADD IX, DE
 	JP next
 
 
@@ -797,7 +851,7 @@ loop_raw:
 	OR A
 	SBC HL, DE
 	JR NZ, .loop
-	LD BC, 4
+	LD BC, 6
 	ADD IX, BC
 	INC IY
 	POP HL
@@ -849,7 +903,7 @@ plus_loop_raw:
 	POP HL
 	JP next
 .end_loop:
-	LD BC, 4
+	LD BC, 6
 	ADD IX, BC
 	INC IY
 	JR .exit
@@ -2634,33 +2688,6 @@ dnegate:
 	DW exit
 
 
-	; \ If n1 = n2 skip the ?DO..LOOP, otherwise move n1+n2 to return stack
-	; : (?DO) ( n1 n2 -- ) ( R: -- | n1 n2 )
-	HEADER question_do_raw, "(?DO)", 0
-question_do_raw:
-	CALL colon_code
-	; r> 1+ -rot 2dup = IF 2drop dup 1- c@ + ELSE 2>r THEN >r \
-	DW r_from
-	DW one_plus
-	DW minus_rot
-	DW two_dup
-	DW equals
-	DW if_raw
-	DB .else-$-1
-	DW two_drop
-	DW dup
-	DW one_minus
-	DW c_fetch
-	DW plus
-	DW else_skip
-	DB .then-$-1
-.else:
-	DW two_to_r
-.then:
-	DW to_r
-	DW exit
-
-
 	HEADER s_quote_raw, '(S")', 0
 s_quote_raw:
 	CALL colon_code
@@ -3417,19 +3444,6 @@ number:
 compile_comma:
 	CALL colon_code
 	DW comma
-	DW exit
-
-
-	; \ Use before exiting from a DO..LOOP
-	; : unloop ( R: x1 x2 -- )
-	HEADER unloop, "UNLOOP", 0
-unloop:
-	CALL colon_code
-	; r> 2r> 2drop >r \
-	DW r_from
-	DW two_r_from
-	DW two_drop
-	DW to_r
 	DW exit
 
 
@@ -4254,7 +4268,8 @@ dot_s:
 		DW raw_char
 		DB 2
 		DW minus
-		DW two_to_r
+		DW do_raw
+		DB .loop-$-1
 .do:
 			; i @ .
 			DW r_fetch
@@ -4317,7 +4332,8 @@ dot_rs:
 	DW raw_char
 	DB 2
 	DW minus
-	DW two_to_r
+	DW do_raw
+	DB .loop-$-1
 .do:
 		; i @ u.
 		DW r_fetch
@@ -4696,21 +4712,22 @@ repeat:
 	DW exit
 
 
-	; ( -- dest false)
-	; : DO POSTPONE 2>R HERE FALSE ; IMMEDIATE
+	; ( -- dest)
+	; : DO POSTPONE (DO) 1 ALLOT HERE ; IMMEDIATE
 	HEADER do, "DO", 1
 do:
 	CALL colon_code
 	DW literal_raw
-	DW two_to_r
+	DW do_raw
 	DW compile_comma
+	DW one_literal
+	DW allot
 	DW here
-	DW false
 	DW exit
 
 
-	; ( -- dest true)
-	; : ?DO POSTPONE (?DO) 1 ALLOT HERE TRUE ; IMMEDIATE
+	; ( -- dest)
+	; : ?DO POSTPONE (?DO) 1 ALLOT HERE ; IMMEDIATE
 	HEADER question_do, "?DO", 1
 question_do:
 	CALL colon_code
@@ -4720,7 +4737,6 @@ question_do:
 	DW one_literal
 	DW allot
 	DW here
-	DW true
 	DW exit
 
 
@@ -4729,41 +4745,24 @@ question_do:
 	HEADER loop, "LOOP", 1
 loop:
 	CALL colon_code
-	; IF
-	DW if_raw
-	DB .else-$-1
-		; POSTPONE (LOOP)
-		DW literal_raw
-		DW loop_raw
-		DW compile_comma
-		; DUP HERE - C,
-		DW dup
-		DW here
-		DW minus
-		DW c_comma
-		; DUP 1- SWAP HERE SWAP - SWAP C!
-		DW dup
-		DW one_minus
-		DW swap
-		DW here
-		DW swap
-		DW minus
-		DW swap
-		DW c_store
-	; ELSE
-	DW else_skip
-	DB .then-$-1
-.else:
-		; POSTPONE (LOOP)
-		DW literal_raw
-		DW loop_raw
-		DW compile_comma
-		; HERE - C,
-		DW here
-		DW minus
-		DW c_comma
-	; THEN
-.then:
+	; POSTPONE (LOOP)
+	DW literal_raw
+	DW loop_raw
+	DW compile_comma
+	; DUP HERE - C,
+	DW dup
+	DW here
+	DW minus
+	DW c_comma
+	; DUP 1- SWAP HERE SWAP - SWAP C!
+	DW dup
+	DW one_minus
+	DW swap
+	DW here
+	DW swap
+	DW minus
+	DW swap
+	DW c_store
 	; ; IMMEDIATE
 	DW exit
 
