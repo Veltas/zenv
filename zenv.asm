@@ -5230,6 +5230,17 @@ slash:
 	DW exit
 
 
+	; ( num den -- rem)
+	; : MOD
+	HEADER _mod, "MOD", 0
+_mod:
+	CALL colon_code
+	; /MOD DROP ;
+	DW slash_mod
+	DW drop
+	DW exit
+
+
 	; ( xt -- data-addr)
 	; : >BODY
 	HEADER to_body, ">BODY", 0
