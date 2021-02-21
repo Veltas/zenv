@@ -435,6 +435,38 @@ i_tick:
 	JP next
 
 
+	HEADER _j, "J", 0
+j:
+	PUSH HL
+	LD L, (IX+4)
+	LD H, (IX+5)
+	JP next
+
+
+	HEADER j_tick, "J'", 0
+j_tick:
+	PUSH HL
+	LD L, (IX+6)
+	LD H, (IX+7)
+	JP next
+
+
+	HEADER _k, "K", 0
+_k:
+	PUSH HL
+	LD L, (IX+8)
+	LD H, (IX+9)
+	JP next
+
+
+	HEADER k_tick, "K'", 0
+k_tick:
+	PUSH HL
+	LD L, (IX+10)
+	LD H, (IX+11)
+	JP next
+
+
 	HEADER two_r_fetch, "2R@", 0
 two_r_fetch:
 	PUSH HL
