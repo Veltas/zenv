@@ -1870,7 +1870,7 @@ within:
 	DW minus
 	DW swap
 	; ( offset range-length )
-	; U< \
+	; U< ;
 	DW u_less_than
 	DW exit
 
@@ -1879,7 +1879,7 @@ within:
 	HEADER comma, ",", 0
 comma:
 	CALL colon_code
-	; HERE CELL ALLOT ! \
+	; HERE CELL ALLOT ! ;
 	DW here
 	DW cell
 	DW allot
@@ -1914,7 +1914,7 @@ literal:
 		DW literal_raw
 		DW compile_comma
 		DW comma
-	; THEN \
+	; THEN ;
 .then:
 	DW exit
 
@@ -1997,7 +1997,7 @@ scroll:
 	DW t_attr
 	DW c_fetch
 	DW fill
-	; \
+	; ;
 	DW exit
 
 	; : CR
@@ -2021,7 +2021,7 @@ cr:
 	DW zero_literal
 	DW t_col
 	DW c_store
-	; \
+	; ;
 	DW exit
 
 	; : BS ( -- ) \ Write a backspace to terminal
@@ -2043,7 +2043,7 @@ bs:
 		DW space
 		DW t_col
 		DW c_store
-	; THEN \
+	; THEN ;
 .then:
 	DW exit
 
@@ -2147,7 +2147,7 @@ to_number_sign:
 	HEADER less_number_sign, "<#", 0
 less_number_sign:
 	CALL colon_code
-	; 0 ># C! \
+	; 0 ># C! ;
 	DW zero_literal
 	DW to_number_sign
 	DW c_store
@@ -2165,7 +2165,7 @@ hold:
 	DW to_number_sign
 	DW c_plus_store
 	; \ Store character at (># + 'WORD)
-	; 'WORD ># C@ + C! \
+	; 'WORD ># C@ + C! ;
 	DW tick_word
 	DW to_number_sign
 	DW c_fetch
@@ -2178,7 +2178,7 @@ hold:
 	HEADER sign, "SIGN", 0
 sign:
 	CALL colon_code
-	; 0< IF [CHAR] - HOLD THEN \
+	; 0< IF [CHAR] - HOLD THEN ;
 	DW zero_less
 	DW if_raw
 	DB .then-$-1
@@ -2205,7 +2205,7 @@ digit:
 	DB 'A' - '0' - 10
 	DW plus
 .then:
-	; [CHAR] 0 + \
+	; [CHAR] 0 + ;
 	DW raw_char
 	DB '0'
 	DW plus
@@ -2217,7 +2217,7 @@ digit:
 	HEADER number_sign, "#", 0
 number_sign:
 	CALL colon_code
-	; BASE @  DUB/MOD  DIGIT HOLD \
+	; BASE @  DUB/MOD  DIGIT HOLD ;
 	DW base
 	DW fetch
 	DW dub_slash_mod
@@ -2230,7 +2230,7 @@ number_sign:
 	HEADER number_sign_greater, "#>", 0
 number_sign_greater:
 	CALL colon_code
-	; 2DROP  ># C@ 'WORD +  256 ># C@ -  \
+	; 2DROP  ># C@ 'WORD +  256 ># C@ -  ;
 	DW two_drop
 	DW to_number_sign
 	DW c_fetch
@@ -2354,7 +2354,7 @@ u_dot:
 	DW u_dollar_dot
 	DW exit
 .then1:
-	; 0 DU. \
+	; 0 DU. ;
 	DW zero_literal
 	DW du_dot
 	DW exit
@@ -2365,7 +2365,7 @@ u_dot:
 	HEADER s_to_d, "S>D", 0
 s_to_d:
 	CALL colon_code
-	; DUP 0< IF -1 ELSE 0 THEN \
+	; DUP 0< IF -1 ELSE 0 THEN ;
 	DW dup
 	DW zero_less
 	DW if_raw
@@ -2408,7 +2408,7 @@ dot_r:
 	HEADER brdr_store, "BRDR!", 0
 brdr_store:
 	CALL colon_code
-	; 7 AND  ULA P@  0xF8 AND  OR  ULA P! \
+	; 7 AND  ULA P@  0xF8 AND  OR  ULA P! ;
 	DW raw_char
 	DB 7
 	DW and
@@ -2453,7 +2453,7 @@ page:
 	DW t_attr
 	DW c_fetch
 	DW fill
-	; \
+	; ;
 	DW exit
 
 
@@ -2554,7 +2554,7 @@ abort_quote_raw:
 	HEADER allot, "ALLOT", 0
 allot:
 	CALL colon_code
-	; H +! \
+	; H +! ;
 	DW h_
 	DW plus_store
 	DW exit
@@ -2576,7 +2576,7 @@ bl:
 	HEADER c_comma, "C,", 0
 c_comma:
 	CALL colon_code
-	; HERE 1 ALLOT C! \
+	; HERE 1 ALLOT C! ;
 	DW here
 	DW one_literal
 	DW allot
@@ -2588,7 +2588,7 @@ c_comma:
 	HEADER count, "COUNT", 0
 count:
 	CALL colon_code
-	; DUP 1+ SWAP C@ \
+	; DUP 1+ SWAP C@ ;
 	DW dup
 	DW one_plus
 	DW swap
@@ -2601,7 +2601,7 @@ count:
 	HEADER decimal, "DECIMAL", 0
 decimal:
 	CALL colon_code
-	; 10 BASE ! \
+	; 10 BASE ! ;
 	DW raw_char
 	DB 10
 	DW base
@@ -2625,7 +2625,7 @@ depth:
 	HEADER hex, "HEX", 0
 hex:
 	CALL colon_code
-	; 16 BASE ! \
+	; 16 BASE ! ;
 	DW raw_char
 	DB 16
 	DW base
@@ -2633,7 +2633,7 @@ hex:
 	DW exit
 
 
-	; : MAX 2DUP < IF SWAP THEN DROP \
+	; : MAX 2DUP < IF SWAP THEN DROP ;
 	HEADER max, "MAX", 0
 max:
 	CALL colon_code
@@ -2650,7 +2650,7 @@ max:
 	HEADER move, "MOVE", 0
 move:
 	CALL colon_code
-	; : MOVE -ROT 2DUP < IF ROT CMOVE> ELSE ROT CMOVE THEN \
+	; : MOVE -ROT 2DUP < IF ROT CMOVE> ELSE ROT CMOVE THEN ;
 	DW minus_rot
 	DW two_dup
 	DW less_than
@@ -2691,7 +2691,7 @@ dnegate:
 	HEADER s_quote_raw, '(S")', 0
 s_quote_raw:
 	CALL colon_code
-	; R> COUNT 2DUP + >R \
+	; R> COUNT 2DUP + >R ;
 	DW r_from
 	DW count
 	DW two_dup
@@ -2703,7 +2703,7 @@ s_quote_raw:
 	HEADER dot_quote_raw, '(.")', 0
 dot_quote_raw:
 	CALL colon_code
-	; R> COUNT 2DUP + >R TYPE \
+	; R> COUNT 2DUP + >R TYPE ;
 	DW r_from
 	DW count
 	DW two_dup
@@ -2779,7 +2779,7 @@ accept:
 	DB .begin-$+256
 .repeat:
 	; ( size idx ) ( R: buf )
-	; R> DROP NIP \
+	; R> DROP NIP ;
 	DW r_from
 	DW drop
 	DW nip
@@ -2791,7 +2791,7 @@ accept:
 	HEADER line_read, "-READ", 0
 line_read:
 	CALL colon_code
-	; -IN DUP -IN# ACCEPT \
+	; -IN DUP -IN# ACCEPT ;
 	DW line_in
 	DW dup
 	DW line_in_size
@@ -3464,7 +3464,7 @@ lower:
 		DW raw_char
 		DB 'a' - 'A'
 		DW plus
-	; THEN \
+	; THEN ;
 .then:
 	DW exit
 
@@ -3487,12 +3487,12 @@ upper:
 		DW literal_raw
 		DW 'A' - 'a'
 		DW plus
-	; THEN \
+	; THEN ;
 .then:
 	DW exit
 
 
-	; : ERASE 0 FILL \
+	; : ERASE 0 FILL ;
 	HEADER erase, "ERASE", 0
 erase:
 	CALL colon_code
@@ -3516,7 +3516,7 @@ spaces:
 	; 0 MAX
 	DW zero_literal
 	DW max
-	; 0 ?DO SPACE LOOP \
+	; 0 ?DO SPACE LOOP ;
 	DW zero_literal
 	DW question_do_raw
 	DB .loop-$-1
@@ -3556,7 +3556,7 @@ ula:
 	HEADER d_plus_store, "D+!", 0
 d_plus_store:
 	CALL colon_code
-	; TUCK2 2@ D+ ROT 2! \
+	; TUCK2 2@ D+ ROT 2! ;
 	DW tuck2
 	DW two_fetch
 	DW d_plus
@@ -3565,7 +3565,7 @@ d_plus_store:
 	DW exit
 
 
-	; : (2LITERAL)  R>  DUP [ 2 CELLS ] LITERAL + >R  2@  \
+	; : (2LITERAL)  R>  DUP [ 2 CELLS ] LITERAL + >R  2@  ;
 	HEADER two_literal_raw, "(2LITERAL)", 0
 two_literal_raw:
 	CALL colon_code
@@ -3597,7 +3597,7 @@ at_xy:
 	DW clamp
 	DW t_col
 	DW c_store
-	; \
+	; ;
 	DW exit
 
 
@@ -3633,7 +3633,7 @@ keyq_e:
 	HEADER ekey_question, "EKEY?", 0
 ekey_question:
 	CALL colon_code
-	; KEYQ-E C@ KEYQ-S C@ <> \
+	; KEYQ-E C@ KEYQ-S C@ <> ;
 	DW keyq_e
 	DW c_fetch
 	DW keyq_s
@@ -3646,7 +3646,7 @@ ekey_question:
 	HEADER zero_not_equals, "0<>", 0
 zero_not_equals:
 	CALL colon_code
-	; 0= INVERT \
+	; 0= INVERT ;
 	DW zero_equals
 	DW invert
 	DW exit
@@ -3656,7 +3656,7 @@ zero_not_equals:
 	HEADER not_equals, "<>", 0
 not_equals:
 	CALL colon_code
-	; = INVERT \
+	; = INVERT ;
 	DW equals
 	DW invert
 	DW exit
@@ -3666,7 +3666,7 @@ not_equals:
 	HEADER clamp, "CLAMP", 0
 clamp:
 	CALL colon_code
-	; ROT MIN MAX \
+	; ROT MIN MAX ;
 	DW rot
 	DW min
 	DW max
@@ -3677,7 +3677,7 @@ clamp:
 	HEADER min, "MIN", 0
 min:
 	CALL colon_code
-	; 2DUP > IF SWAP THEN DROP \
+	; 2DUP > IF SWAP THEN DROP ;
 	DW two_dup
 	DW greater_than
 	DW if_raw
@@ -4101,7 +4101,7 @@ kscan:
 	HEADER bit_, "BIT", 0
 bit_:
 	CALL colon_code
-	; 1 SWAP LSHIFT AND \
+	; 1 SWAP LSHIFT AND ;
 	DW one_literal
 	DW swap
 	DW lshift
@@ -4113,7 +4113,7 @@ bit_:
 	HEADER choose, "CHOOSE", 0
 choose:
 	CALL colon_code
-	; ROT IF SWAP THEN NIP \
+	; ROT IF SWAP THEN NIP ;
 	DW rot
 	DW if_raw
 	DB .then-$-1
@@ -4127,7 +4127,7 @@ choose:
 	HEADER two_or, "2OR", 0
 two_or:
 	CALL colon_code
-	; ROT OR -ROT OR SWAP \
+	; ROT OR -ROT OR SWAP ;
 	DW rot
 	DW or
 	DW minus_rot
@@ -4140,7 +4140,7 @@ two_or:
 	HEADER d_zero_less, "D0<", 0
 d_zero_less:
 	CALL colon_code
-	; NIP 0< \
+	; NIP 0< ;
 	DW nip
 	DW zero_less
 	DW exit
@@ -4150,7 +4150,7 @@ d_zero_less:
 	HEADER two_rot, "2ROT", 0
 two_rot:
 	CALL colon_code
-	; 2>R 2SWAP 2R> 2SWAP \
+	; 2>R 2SWAP 2R> 2SWAP ;
 	DW two_to_r
 	DW two_swap
 	DW two_r_from
@@ -4162,7 +4162,7 @@ two_rot:
 	HEADER two_minus_rot, "2-ROT", 0
 two_minus_rot:
 	CALL colon_code
-	; 2SWAP 2>R 2SWAP 2R> \
+	; 2SWAP 2>R 2SWAP 2R> ;
 	DW two_swap
 	DW two_to_r
 	DW two_swap
@@ -4174,7 +4174,7 @@ two_minus_rot:
 	HEADER d_less_than, "D<", 0
 d_less_than:
 	CALL colon_code
-	; 2SWAP $80000000. D+ 2SWAP $80000000. D+ DU< \
+	; 2SWAP $80000000. D+ 2SWAP $80000000. D+ DU< ;
 	DW two_swap
 	DW two_literal_raw
 	DW 0x8000
@@ -4193,7 +4193,7 @@ d_less_than:
 	HEADER two_over_two, "2OVER2", 0
 two_over_two:
 	CALL colon_code
-	; 'S 8 + 2@ \
+	; 'S 8 + 2@ ;
 	DW tick_s
 	DW raw_char
 	DB 8
@@ -4215,7 +4215,7 @@ d_zero_equals:
 	HEADER tone, "TONE", 0
 tone:
 	CALL colon_code
-	; DI ITONE EI \
+	; DI ITONE EI ;
 	DW _di
 	DW itone
 	DW _ei
@@ -4339,7 +4339,7 @@ dot_rs:
 		DW r_fetch
 		DW fetch
 		DW u_dot
-	; -2 +LOOP \
+	; -2 +LOOP ;
 	DW literal_raw
 	DW -2
 	DW plus_loop_raw
