@@ -5401,6 +5401,28 @@ fm_slash_mod:
 	DW exit
 
 
+	; HEX : IMMEDIATE
+	HEADER immediate, "IMMEDIATE", 0
+immediate:
+	CALL colon_code
+	; SYM-LAST @ CELL+
+	DW sym_last
+	DW fetch
+	DW cell_plus
+	; ( addr)
+	; DUP C@ 80 OR SWAP C!
+	DW dup
+	DW c_fetch
+	DW raw_char
+	DB 0x80
+	DW or
+	DW swap
+	DW c_store
+	; ( )
+	; ; DECIMAL
+	DW exit
+
+
 repeat_wait_init: EQU 45  ; 0.9s
 repeat_repeat_init: EQU 5 ; 0.1s
 
