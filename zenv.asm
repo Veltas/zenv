@@ -4531,6 +4531,14 @@ colon_depth:
 	DW 0
 
 
+	; \ Use to remember start of current colon def
+	; VARIABLE :START
+	HEADER colon_start, ":START", 0
+colon_start:
+	CALL create_code
+	DW 0
+
+
 	; \ Start compiling a colon definition with given name
 	; ( " name" -- colon-sys)
 	; : :
@@ -4550,6 +4558,11 @@ colon:
 	; SYM,
 	DW sym_comma
 	; ( colon-sys)
+	; \ Remember code address
+	; HERE :START !
+	DW here
+	DW colon_start
+	DW store
 	; \ Write CALL colon-code
 	; ??? CALL
 	DW literal_raw
@@ -4634,9 +4647,8 @@ then:
 _else:
 	CALL colon_code
 	; POSTPONE (ELSE)
-	DW literal_raw
+	DW postpone_raw
 	DW else_skip
-	DW compile_comma
 	; HERE
 	DW here
 	; ( orig)
@@ -4662,9 +4674,8 @@ begin:
 	HEADER again, "AGAIN", 1
 again:
 	CALL colon_code
-	DW literal_raw
+	DW postpone_raw
 	DW again_raw
-	DW compile_comma
 	DW here
 	DW minus
 	DW c_comma
@@ -4676,9 +4687,8 @@ again:
 	HEADER until, "UNTIL", 1
 until:
 	CALL colon_code
-	DW literal_raw
+	DW postpone_raw
 	DW until_raw
-	DW compile_comma
 	DW here
 	DW minus
 	DW c_comma
@@ -4710,9 +4720,8 @@ repeat:
 	HEADER do, "DO", 1
 do:
 	CALL colon_code
-	DW literal_raw
+	DW postpone_raw
 	DW do_raw
-	DW compile_comma
 	DW one_literal
 	DW allot
 	DW here
@@ -4724,9 +4733,8 @@ do:
 	HEADER question_do, "?DO", 1
 question_do:
 	CALL colon_code
-	DW literal_raw
+	DW postpone_raw
 	DW question_do_raw
-	DW compile_comma
 	DW one_literal
 	DW allot
 	DW here
@@ -4739,9 +4747,8 @@ question_do:
 loop:
 	CALL colon_code
 	; POSTPONE (LOOP)
-	DW literal_raw
+	DW postpone_raw
 	DW loop_raw
-	DW compile_comma
 	; DUP HERE - C,
 	DW dup
 	DW here
@@ -4785,9 +4792,8 @@ plus_loop:
 	HEADER _i, "I", 1
 _i:
 	CALL colon_code
-	DW literal_raw
+	DW postpone_raw
 	DW r_fetch
-	DW compile_comma
 	DW exit
 
 
@@ -4946,9 +4952,8 @@ evaluate:
 dot_quote:
 	CALL colon_code
 	; POSTPONE (.")
-	DW literal_raw
+	DW postpone_raw
 	DW dot_quote_raw
-	DW compile_comma
 	; [CHAR] " PARSE
 	DW raw_char
 	DB '"'
@@ -4965,9 +4970,8 @@ dot_quote:
 s_quote:
 	CALL colon_code
 	; POSTPONE (S")
-	DW literal_raw
+	DW postpone_raw
 	DW s_quote_raw
-	DW compile_comma
 	; [CHAR] " PARSE
 	DW raw_char
 	DB '"'
@@ -5253,9 +5257,8 @@ to_body:
 abort_quote:
 	CALL colon_code
 	; POSTPONE (ABORT")
-	DW literal_raw
+	DW postpone_raw
 	DW abort_quote_raw
-	DW compile_comma
 	; [CHAR] " PARSE CSTR, ;
 	DW raw_char
 	DB '"'
@@ -5296,9 +5299,8 @@ bracket_char:
 	DW char
 	; ( c)
 	; POSTPONE (CHAR)
-	DW literal_raw
+	DW postpone_raw
 	DW raw_char
-	DW compile_comma
 	; C, ;
 	DW c_comma
 	DW exit
@@ -5350,9 +5352,8 @@ does_raw:
 does:
 	CALL colon_code
 	; POSTPONE (DOES)
-	DW literal_raw
+	DW postpone_raw
 	DW does_raw
-	DW compile_comma
 	; ??? CALL ;
 	DW literal_raw
 	DW does_code
@@ -5484,8 +5485,20 @@ postpone:
 		; COMPILE,
 		DW compile_comma
 		; ( )
-	; THEN ;
+	; THEN ; IMMEDIATE
 .then2:
+	DW exit
+
+
+	; : RECURSE
+	HEADER recurse, "RECURSE", 1
+recurse:
+	CALL colon_code
+	; :START @ COMPILE,
+	DW colon_start
+	DW fetch
+	DW compile_comma
+	; ; IMMEDIATE
 	DW exit
 
 
