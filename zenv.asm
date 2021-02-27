@@ -5502,6 +5502,30 @@ recurse:
 	DW exit
 
 
+	; \ Remove u2 characters from string
+	; ( addr1 u1 u2 -- addr2 u3)
+	; : /STRING
+	HEADER slash_string, "/STRING", 0
+slash_string:
+	CALL colon_code
+	; TUCK
+	DW tuck
+	; ( addr1 u2 u1 u2)
+	; -
+	DW minus
+	; ( addr1 u2 u3)
+	; SWAP ROT
+	DW swap
+	DW rot
+	; ( u3 u2 addr1)
+	; +
+	DW plus
+	; ( u3 addr2)
+	; SWAP ;
+	DW swap
+	DW exit
+
+
 repeat_wait_init: EQU 45  ; 0.9s
 repeat_repeat_init: EQU 5 ; 0.1s
 
