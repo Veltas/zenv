@@ -1,3 +1,9 @@
+# ZEnv - Forth for the ZX Spectrum
+# Copyright 2021 (C) - Christopher Leonard, MIT Licence
+# https://github.com/veltas/zenv
+
+# Makefile
+
 .PHONY: all
 all: bin/zenv.tap
 

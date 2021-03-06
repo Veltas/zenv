@@ -1,4 +1,9 @@
-" Vim syntax file
+" ZEnv - Forth for the ZX Spectrum
+" Copyright 2021 (C) - Christopher Leonard, MIT Licence
+" https://github.com/veltas/zenv
+
+" Vim syntax file for Z80 assembly
+
 " Copy to e.g. ~/.vim/syntax/ to enable
 
 if exists("b:current_syntax")

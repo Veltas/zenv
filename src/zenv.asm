@@ -1,3 +1,11 @@
+; vi:syntax=z80
+
+; ZEnv - Forth for the ZX Spectrum
+; Copyright 2021 (C) - Christopher Leonard, MIT Licence
+; https://github.com/veltas/zenv
+
+; Master assembly/definitions file
+
 tokenised: EQU 1
 
 t_attr_init: EQU 0x38
