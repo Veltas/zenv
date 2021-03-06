@@ -3608,18 +3608,28 @@ toks:
 compile_comma:
 	CALL colon_code
 	IF tokenised
+		; \ Search for xt in tokens vector
+		; [ TOKS 128 CELLS + ] LITERAL TOKS DO
+		DX literal_raw: DW tokens + 256: DX toks: DX do_raw: DB .loop-$-1
+.do:
+			; \ If in tokens vector then compile the index
+			; DUP I @ = IF
+			DX dup: DX r_fetch: DX fetch: DX equals: DX if_raw: DB .then-$-1
+				; I TOKS - 2/ C,
+				DX r_fetch: DX toks: DX minus: DX two_slash: DX c_comma
+				; DROP UNLOOP EXIT
+				DX drop: DX unloop: DX exit
+			; THEN
+.then:
+		; CELL +LOOP
+		DX cell: DX plus_loop_raw: DB .do-$+256
+.loop:
+		; \ Otherwise compile xt as big-endian
 		; DUP 8 RSHIFT C, C, ;
-		DX dup
-		DX raw_char
-		DB 8
-		DX rshift
-		DX c_comma
-		DX c_comma
-		DX exit
+		DX dup: DX raw_char: DB 8: DX rshift: DX c_comma: DX c_comma: DX exit
 	ELSE
 		; , ;
-		DX comma
-		DX exit
+		DX comma: DX exit
 	ENDIF
 
 
