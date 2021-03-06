@@ -1,3 +1,5 @@
+tokenised: EQU 1
+
 t_attr_init: EQU 0x38
 load_addr: EQU 0x8000
 disp_file_val: EQU 0x4000
@@ -34,6 +36,20 @@ this_header = $
 	DM ___text
 .se:
 	ENDM
+
+	IF tokenised
+		MACRO DX ___val
+			IF EXIST ___val_tok
+				DB (___val_tok - tokens) / 2
+			ELSE
+				DB (___val) >> 8, (___val) & 0xFF
+			ENDIF
+		ENDM
+	ELSE
+		MACRO DX ___val
+			DW ___val
+		ENDM
+	ENDIF
 
 	ORG load_addr
 
@@ -95,14 +111,40 @@ colon_code:
 
 ; JP next at end of code
 next:
-	; Load address, advance PC
-	LD E, (IY+0)
-	INC IY
-	LD D, (IY+0)
-	INC IY
-	; Jump to address
-	PUSH DE
-	RET
+	IF tokenised
+		; Load byte, advance PC
+		LD A, (IY+0)
+		INC IY
+		CP 0x80
+		JR NC, .not_token
+		; If token, load token address and jump
+		ADD A, A
+		LD E, A
+		LD D, tokens >> 8
+		LD A, (DE)
+		LD C, A
+		INC DE
+		LD A, (DE)
+		LD B, A
+		PUSH BC
+		RET
+.not_token:
+		; If not token, jump to big endian address
+		LD D, A
+		LD E, (IY+0)
+		INC IY
+		PUSH DE
+		RET
+	ELSE
+		; Load address, advance PC
+		LD E, (IY+0)
+		INC IY
+		LD D, (IY+0)
+		INC IY
+		; Jump to address
+		PUSH DE
+		RET
+	ENDIF
 
 
 	; CALL this address, with DE set to code to call, uses next
@@ -125,7 +167,7 @@ asm_call:
 	PUSH DE
 	RET
 asm_call_param:
-	DW asm_exit
+	DX asm_exit
 asm_exit:
 	LD E, (IX+0)
 	LD D, (IX+1)
@@ -190,7 +232,7 @@ constant_code:
 	INC HL
 	LD D, (HL)
 	EX DE, HL
-	JR next
+	JP next
 
 
 create_code:
@@ -225,6 +267,125 @@ two_drop:
 	POP HL
 	POP HL
 	JP next
+
+
+	; Tokens vector
+	IF tokenised
+	ALIGN 0x100
+tokens:
+exit_tok:
+	DW exit
+dup_tok:
+	DW dup
+question_dup_tok:
+	DW question_dup
+less_than_tok:
+	DW less_than
+greater_than_tok:
+	DW greater_than
+drop_tok:
+	DW drop
+two_drop_tok:
+	DW two_drop
+swap_tok:
+	DW swap
+rot_tok:
+	DW rot
+over_tok:
+	DW over
+nip_tok:
+	DW nip
+tuck_tok:
+	DW tuck
+plus_tok:
+	DW plus
+one_plus_tok:
+	DW one_plus
+one_minus_tok:
+	DW one_minus
+minus_tok:
+	DW minus
+raw_char_tok:
+	DW raw_char
+literal_raw_tok:
+	DW literal_raw
+if_raw_tok:
+	DW if_raw
+else_skip_tok:
+	DW else_skip
+store_tok:
+	DW store
+c_store_tok:
+	DW c_store
+fetch_tok:
+	DW fetch
+c_fetch_tok:
+	DW c_fetch
+two_fetch_tok:
+	DW two_fetch
+two_swap_tok:
+	DW two_swap
+to_r_tok:
+	DW to_r
+r_from_tok:
+	DW r_from
+r_fetch_tok:
+	DW r_fetch
+zero_literal_tok:
+	DW zero_literal
+one_literal_tok:
+	DW one_literal
+true_tok:
+	DW true
+to_in_tok:
+	DW to_in
+postpone_raw_tok:
+	DW postpone_raw
+zero_equals_tok:
+	DW zero_equals
+equals_tok:
+	DW equals
+not_equals_tok:
+	DW not_equals
+until_raw_tok:
+	DW until_raw
+again_raw_tok:
+	DW again_raw
+do_raw_tok:
+	DW do_raw
+question_do_raw_tok:
+	DW question_do_raw
+loop_raw_tok:
+	DW loop_raw
+compile_comma_tok:
+	DW compile_comma
+negate_tok:
+	DW negate
+_abs_tok:
+	DW _abs
+and_tok:
+	DW and
+or_tok:
+	DW or
+xor_tok:
+	DW xor
+invert_tok:
+	DW invert
+tick_in_tok:
+	DW tick_in
+in_size_tok:
+	DW in_size
+dot_quote_raw_tok:
+	DW dot_quote_raw
+abort_quote_raw_tok:
+	DW abort_quote_raw
+t_col_tok:
+	DW t_col
+t_row_tok:
+	DW t_row
+within_tok:
+	DW within
+	ENDIF
 
 
 	HEADER dup, "DUP", 0
@@ -1567,9 +1728,9 @@ u_slash_mod:
 	HEADER greater_than, ">", 0
 greater_than:
 	CALL colon_code
-	DW swap
-	DW less_than
-	DW exit
+	DX swap
+	DX less_than
+	DX exit
 
 
 	; -1 CONSTANT TRUE
@@ -1598,9 +1759,9 @@ h_:
 here:
 	CALL colon_code
 	; H @ ;
-	DW h_
-	DW fetch
-	DW exit
+	DX h_
+	DX fetch
+	DX exit
 
 
 ; Points to most recently defined symbol
@@ -1699,11 +1860,11 @@ in_size:
 source:
 	CALL colon_code
 	; 'IN @ IN# @ ;
-	DW tick_in
-	DW fetch
-	DW in_size
-	DW fetch
-	DW exit
+	DX tick_in
+	DX fetch
+	DX in_size
+	DX fetch
+	DX exit
 
 
 	HEADER line_in, "-IN", 0
@@ -1730,15 +1891,15 @@ tick_int:
 int:
 	CALL colon_code
 	; 1. FRAMES D+! \ increment FRAMES
-	DW two_literal_raw
+	DX two_literal_raw
 	DW 0
 	DW 1
-	DW frames
-	DW d_plus_store
+	DX frames
+	DX d_plus_store
 	; \ update keyboard state
 	; KSCAN ;
-	DW kscan
-	DW exit
+	DX kscan
+	DX exit
 
 
 	; \ Get name string from symbol header address
@@ -1747,16 +1908,16 @@ int:
 to_sym:
 	CALL colon_code
 	; CELL+  DUP C@ $7F AND  SWAP CHAR+ SWAP ;
-	DW cell_plus
-	DW dup
-	DW c_fetch
-	DW raw_char
+	DX cell_plus
+	DX dup
+	DX c_fetch
+	DX raw_char
 	DB 0x7F
-	DW and
-	DW swap
-	DW one_plus
-	DW swap
-	DW exit
+	DX and
+	DX swap
+	DX one_plus
+	DX swap
+	DX exit
 
 
 	; ( str len -- )
@@ -1765,21 +1926,21 @@ to_sym:
 type:
 	CALL colon_code
 	; OVER +
-	DW over
-	DW plus
+	DX over
+	DX plus
 	; ( str end )
 	; SWAP ?DO I C@ EMIT LOOP ;
-	DW swap
-	DW question_do_raw
+	DX swap
+	DX question_do_raw
 	DB .loop-$-1
 .do:
-	DW r_fetch
-	DW c_fetch
-	DW emit
-	DW loop_raw
+	DX r_fetch
+	DX c_fetch
+	DX emit
+	DX loop_raw
 	DB .do-$+256
 .loop:
-	DW exit
+	DX exit
 
 
 	; \ Type all word names in dictionary to the output device
@@ -1788,27 +1949,27 @@ type:
 words:
 	CALL colon_code
 	; SYM-LAST @
-	DW sym_last
-	DW fetch
+	DX sym_last
+	DX fetch
 	; BEGIN
 .begin:
 		; \ Print name
 		; DUP >SYM TYPE  SPACE
-		DW dup
-		DW to_sym
-		DW type
-		DW space
+		DX dup
+		DX to_sym
+		DX type
+		DX space
 		; \ Goto next symbol
 		; @
-		DW fetch
+		DX fetch
 	; ?DUP 0= UNTIL
-	DW question_dup
-	DW zero_equals
-	DW until_raw
+	DX question_dup
+	DX zero_equals
+	DX until_raw
 	DB .begin-$+256
 	; CR ;
-	DW cr
-	DW exit
+	DX cr
+	DX exit
 
 
 	; : KEY ( -- char )  \ Wait for next input char, using EKEY
@@ -1820,19 +1981,19 @@ key:
 .begin:
 		; ( )
 		; EKEY EKEY>CHAR 0= WHILE DROP
-		DW ekey
-		DW ekey_to_char
-		DW zero_equals
-		DW if_raw
+		DX ekey
+		DX ekey_to_char
+		DX zero_equals
+		DX if_raw
 		DB .repeat-$-1
-		DW drop
+		DX drop
 	; REPEAT
-	DW again_raw
+	DX again_raw
 	DB .begin-$+256
 .repeat:
 	; CLICK ;
-	DW click
-	DW exit
+	DX click
+	DX exit
 
 
 	; : MAIN
@@ -1841,18 +2002,18 @@ main:
 	CALL colon_code
 	; \ Clear screen
 	; PAGE
-	DW page
+	DX page
 	; \ Greeting
 	; ." HI"
-	DW dot_quote_raw
+	DX dot_quote_raw
 	DB .s1e-.s1
 .s1:
 	DM "HI"
 .s1e:
 	; \ Run interpreter
 	; ABORT ;
-	DW abort
-	DW exit
+	DX abort
+	DX exit
 
 
 	; : WITHIN ( n start end -- flags ) \ Is n within [start, end), or (end,
@@ -1862,17 +2023,17 @@ within:
 	CALL colon_code
 	; ( n start end )
 	; OVER -
-	DW over
-	DW minus
+	DX over
+	DX minus
 	; ( n start range-length )
 	; -ROT - SWAP
-	DW minus_rot
-	DW minus
-	DW swap
+	DX minus_rot
+	DX minus
+	DX swap
 	; ( offset range-length )
 	; U< ;
-	DW u_less_than
-	DW exit
+	DX u_less_than
+	DX exit
 
 
 	; : , ( x -- ) \ Append cell to end of dictionary
@@ -1880,11 +2041,11 @@ within:
 comma:
 	CALL colon_code
 	; HERE CELL ALLOT ! ;
-	DW here
-	DW cell
-	DW allot
-	DW store
-	DW exit
+	DX here
+	DX cell
+	DX allot
+	DX store
+	DX exit
 
 
 	; \ Compile colon code to put x on the stack
@@ -1893,28 +2054,28 @@ comma:
 literal:
 	CALL colon_code
 	; DUP 0 256 WITHIN IF
-	DW dup
-	DW zero_literal
-	DW literal_raw
+	DX dup
+	DX zero_literal
+	DX literal_raw
 	DW 256
-	DW within
-	DW if_raw
+	DX within
+	DX if_raw
 	DB .else-$-1
 		; POSTPONE (CHAR) C,
-		DW postpone_raw
+		DX postpone_raw
 		DW raw_char
-		DW c_comma
+		DX c_comma
 	; ELSE
-	DW else_skip
+	DX else_skip
 	DB .then-$-1
 .else:
 		; POSTPONE (LITERAL) ,
-		DW postpone_raw
+		DX postpone_raw
 		DW literal_raw
-		DW comma
+		DX comma
 	; THEN ;
 .then:
-	DW exit
+	DX exit
 
 
 	; \ Compile colon code to put dx on the stack
@@ -1924,30 +2085,30 @@ literal:
 two_literal:
 	CALL colon_code
 	; 2DUP D0= IF
-	DW two_dup
-	DW d_zero_equals
-	DW if_raw
+	DX two_dup
+	DX d_zero_equals
+	DX if_raw
 	DB .else-$-1
 		; 2DROP POSTPONE 0 POSTPONE 0
-		DW two_drop
-		DW postpone_raw
+		DX two_drop
+		DX postpone_raw
 		DW zero_literal
-		DW postpone_raw
+		DX postpone_raw
 		DW zero_literal
 	; ELSE
-	DW else_skip
+	DX else_skip
 	DB .then-$-1
 .else:
 		; POSTPONE (2LITERAL)
-		DW postpone_raw
+		DX postpone_raw
 		DW two_literal_raw
 		; SWAP , ,
-		DW swap
-		DW comma
-		DW comma
+		DX swap
+		DX comma
+		DX comma
 	; THEN ;
 .then:
-	DW exit
+	DX exit
 
 
 	; : SCROLL
@@ -1955,92 +2116,92 @@ two_literal:
 scroll:
 	CALL colon_code
 	; T-ROW C@ 8 -  0 MAX  T-ROW C!
-	DW t_row
-	DW c_fetch
-	DW raw_char
+	DX t_row
+	DX c_fetch
+	DX raw_char
 	DB 8
-	DW minus
-	DW zero_literal
-	DW max
-	DW t_row
-	DW c_store
+	DX minus
+	DX zero_literal
+	DX max
+	DX t_row
+	DX c_store
 	; [ DISP-FILE 2048 + ] LITERAL  DISP-FILE  4096  CMOVE
-	DW literal_raw
+	DX literal_raw
 	DW disp_file_val + 2048
-	DW disp_file
-	DW literal_raw
+	DX disp_file
+	DX literal_raw
 	DW 4096
-	DW cmove
+	DX cmove
 	; [ ATTR-FILE 256 + ] LITERAL  ATTR-FILE  512  CMOVE
-	DW literal_raw
+	DX literal_raw
 	DW attr_file_val + 256
-	DW attr_file
-	DW literal_raw
+	DX attr_file
+	DX literal_raw
 	DW 512
-	DW cmove
+	DX cmove
 	; [ DISP-FILE 4096 + ] LITERAL  2048  ERASE
-	DW literal_raw
+	DX literal_raw
 	DW disp_file_val + 4096
-	DW literal_raw
+	DX literal_raw
 	DW 2048
-	DW erase
+	DX erase
 	; [ ATTR-FILE 512 + ] LITERAL  256  T-ATTR C@  FILL
-	DW literal_raw
+	DX literal_raw
 	DW attr_file_val + 512
-	DW literal_raw
+	DX literal_raw
 	DW 256
-	DW t_attr
-	DW c_fetch
-	DW fill
+	DX t_attr
+	DX c_fetch
+	DX fill
 	; ;
-	DW exit
+	DX exit
 
 	; : CR
 	HEADER cr, "CR", 0
 cr:
 	CALL colon_code
 	; T-ROW C@ 22 > IF SCROLL THEN 1 T-ROW C+!
-	DW t_row
-	DW c_fetch
-	DW raw_char
+	DX t_row
+	DX c_fetch
+	DX raw_char
 	DB 22
-	DW greater_than
-	DW if_raw
+	DX greater_than
+	DX if_raw
 	DB .cr__if_skip-$-1
-	DW scroll
+	DX scroll
 .cr__if_skip:
-	DW one_literal
-	DW t_row
-	DW c_plus_store
+	DX one_literal
+	DX t_row
+	DX c_plus_store
 	; 0 T-COL C!
-	DW zero_literal
-	DW t_col
-	DW c_store
+	DX zero_literal
+	DX t_col
+	DX c_store
 	; ;
-	DW exit
+	DX exit
 
 	; : BS ( -- ) \ Write a backspace to terminal
 	HEADER bs, "BS", 0
 bs:
 	CALL colon_code
 	; T-COL C@ ?DUP IF
-	DW t_col
-	DW c_fetch
-	DW question_dup
-	DW if_raw
+	DX t_col
+	DX c_fetch
+	DX question_dup
+	DX if_raw
 	DB .then-$-1
 		; ( col )
 		; 1-  DUP T-COL C!  SPACE  T-COL C!
-		DW one_minus
-		DW dup
-		DW t_col
-		DW c_store
-		DW space
-		DW t_col
-		DW c_store
+		DX one_minus
+		DX dup
+		DX t_col
+		DX c_store
+		DX space
+		DX t_col
+		DX c_store
 	; THEN ;
 .then:
-	DW exit
+	DX exit
 
 	HEADER emit, "EMIT", 0
 emit:
@@ -2143,10 +2304,10 @@ to_number_sign:
 less_number_sign:
 	CALL colon_code
 	; 0 ># C! ;
-	DW zero_literal
-	DW to_number_sign
-	DW c_store
-	DW exit
+	DX zero_literal
+	DX to_number_sign
+	DX c_store
+	DX exit
 
 	; \ Prefix pictured numeric string with given character
 	; : HOLD ( c -- )
@@ -2155,18 +2316,18 @@ hold:
 	CALL colon_code
 	; \ Decrement >#
 	; -1 ># C+!
-	DW literal_raw
+	DX literal_raw
 	DW -1
-	DW to_number_sign
-	DW c_plus_store
+	DX to_number_sign
+	DX c_plus_store
 	; \ Store character at (># + 'WORD)
 	; 'WORD ># C@ + C! ;
-	DW tick_word
-	DW to_number_sign
-	DW c_fetch
-	DW plus
-	DW c_store
-	DW exit
+	DX tick_word
+	DX to_number_sign
+	DX c_fetch
+	DX plus
+	DX c_store
+	DX exit
 
 	; \ Add a '-' character to the pictured numeric string if n less than 0
 	; : SIGN ( n -- )
@@ -2174,14 +2335,14 @@ hold:
 sign:
 	CALL colon_code
 	; 0< IF [CHAR] - HOLD THEN ;
-	DW zero_less
-	DW if_raw
+	DX zero_less
+	DX if_raw
 	DB .then-$-1
-	DW raw_char
+	DX raw_char
 	DB '-'
-	DW hold
+	DX hold
 .then:
-	DW exit
+	DX exit
 
 
 	; \ Convert a digit to its character representation
@@ -2190,21 +2351,21 @@ sign:
 digit:
 	CALL colon_code
 	; DUP 9 > IF [ CHAR A CHAR 0 - 10 - ] LITERAL + THEN
-	DW dup
-	DW raw_char
+	DX dup
+	DX raw_char
 	DB 9
-	DW greater_than
-	DW if_raw
+	DX greater_than
+	DX if_raw
 	DB .then-$-1
-	DW raw_char
+	DX raw_char
 	DB 'A' - '0' - 10
-	DW plus
+	DX plus
 .then:
 	; [CHAR] 0 + ;
-	DW raw_char
+	DX raw_char
 	DB '0'
-	DW plus
-	DW exit
+	DX plus
+	DX exit
 
 	; \ Divide ud1 by BASE, quotient goes in ud2, remainder converted to
 	; \ digit and prefixed to pictured numeric output string.
@@ -2213,12 +2374,12 @@ digit:
 number_sign:
 	CALL colon_code
 	; BASE @  DUB/MOD  DIGIT HOLD ;
-	DW base
-	DW fetch
-	DW dub_slash_mod
-	DW digit
-	DW hold
-	DW exit
+	DX base
+	DX fetch
+	DX dub_slash_mod
+	DX digit
+	DX hold
+	DX exit
 
 	; \ Drop double cell, get pictured numeric string
 	; : #> ( xd -- c-addr u )
@@ -2226,17 +2387,17 @@ number_sign:
 number_sign_greater:
 	CALL colon_code
 	; 2DROP  ># C@ 'WORD +  256 ># C@ -  ;
-	DW two_drop
-	DW to_number_sign
-	DW c_fetch
-	DW tick_word
-	DW plus
-	DW literal_raw
+	DX two_drop
+	DX to_number_sign
+	DX c_fetch
+	DX tick_word
+	DX plus
+	DX literal_raw
 	DW 256
-	DW to_number_sign
-	DW c_fetch
-	DW minus
-	DW exit
+	DX to_number_sign
+	DX c_fetch
+	DX minus
+	DX exit
 
 	; \ Do # until quotient is zero
 	; : #S ( ud1 -- ud2 )
@@ -2245,12 +2406,12 @@ number_sign_s:
 	CALL colon_code
 	; BEGIN # 2DUP D0= UNTIL
 .begin:
-	DW number_sign
-	DW two_dup
-	DW d_zero_equals
-	DW until_raw
+	DX number_sign
+	DX two_dup
+	DX d_zero_equals
+	DX until_raw
 	DB .begin-$+256
-	DW exit
+	DX exit
 
 
 	; \ Print an unsigned double number in the current BASE
@@ -2259,12 +2420,12 @@ number_sign_s:
 du_dot:
 	CALL colon_code
 	; <# #S #> TYPE SPACE ;
-	DW less_number_sign
-	DW number_sign_s
-	DW number_sign_greater
-	DW type
-	DW space
-	DW exit
+	DX less_number_sign
+	DX number_sign_s
+	DX number_sign_greater
+	DX type
+	DX space
+	DX exit
 
 
 	; \ Print a double number in the current BASE, field width n
@@ -2274,52 +2435,52 @@ du_dot:
 d_dot_r:
 	CALL colon_code
 	; >R
-	DW to_r
+	DX to_r
 	; ( d) ( R:n)
 	; TUCK
-	DW tuck
+	DX tuck
 	; ( high d)
 	; <#
-	DW less_number_sign
+	DX less_number_sign
 	; DUP 0<  IF  0. 2SWAP D-  THEN
-	DW dup
-	DW zero_less
-	DW if_raw
+	DX dup
+	DX zero_less
+	DX if_raw
 	DB .then-$-1
-	DW zero_literal
-	DW zero_literal
-	DW two_swap
-	DW d_minus
+	DX zero_literal
+	DX zero_literal
+	DX two_swap
+	DX d_minus
 .then:
 	; #S
-	DW number_sign_s
+	DX number_sign_s
 	; ROT SIGN
-	DW rot
-	DW sign
+	DX rot
+	DX sign
 	; ( d)
 	; #> R>
-	DW number_sign_greater
-	DW r_from
+	DX number_sign_greater
+	DX r_from
 	; ( addr u n) ( R:)
 	; \ Print padding spaces
 	; 2DUP < IF OVER - SPACES ELSE DROP THEN
-	DW two_dup
-	DW less_than
-	DW if_raw
+	DX two_dup
+	DX less_than
+	DX if_raw
 	DB .else_spaces-$-1
-	DW over
-	DW minus
-	DW spaces
-	DW else_skip
+	DX over
+	DX minus
+	DX spaces
+	DX else_skip
 	DB .then_spaces-$-1
 .else_spaces:
-	DW drop
+	DX drop
 .then_spaces:
 	; ( addr u)
 	; \ Print number
 	; TYPE ;
-	DW type
-	DW exit
+	DX type
+	DX exit
 
 
 	; \ Print a double number in the current BASE
@@ -2327,10 +2488,10 @@ d_dot_r:
 	HEADER d_dot, "D.", 0
 d_dot:
 	CALL colon_code
-	DW zero_literal
-	DW d_dot_r
-	DW space
-	DW exit
+	DX zero_literal
+	DX d_dot_r
+	DX space
+	DX exit
 
 
 	; \ Print an unsigned number in the current BASE
@@ -2339,20 +2500,20 @@ d_dot:
 u_dot:
 	CALL colon_code
 	; BASE @ 16 = IF U$. EXIT THEN
-	DW base
-	DW fetch
-	DW raw_char
+	DX base
+	DX fetch
+	DX raw_char
 	DB 16
-	DW equals
-	DW if_raw
+	DX equals
+	DX if_raw
 	DB .then1-$-1
-	DW u_dollar_dot
-	DW exit
+	DX u_dollar_dot
+	DX exit
 .then1:
 	; 0 DU. ;
-	DW zero_literal
-	DW du_dot
-	DW exit
+	DX zero_literal
+	DX du_dot
+	DX exit
 
 
 	; \ Convert single to double number
@@ -2361,18 +2522,18 @@ u_dot:
 s_to_d:
 	CALL colon_code
 	; DUP 0< IF -1 ELSE 0 THEN ;
-	DW dup
-	DW zero_less
-	DW if_raw
+	DX dup
+	DX zero_less
+	DX if_raw
 	DB .else-$-1
-	DW literal_raw
+	DX literal_raw
 	DW -1
-	DW else_skip
+	DX else_skip
 	DB .then-$-1
 .else:
-	DW zero_literal
+	DX zero_literal
 .then:
-	DW exit
+	DX exit
 
 
 	; \ Print number in current BASE, followed by space
@@ -2381,9 +2542,9 @@ s_to_d:
 dot:
 	CALL colon_code
 	; S>D D. ;
-	DW s_to_d
-	DW d_dot
-	DW exit
+	DX s_to_d
+	DX d_dot
+	DX exit
 
 
 	; \ Print number in current BASE, with given min. field size
@@ -2391,11 +2552,11 @@ dot:
 	HEADER dot_r, ".R", 0
 dot_r:
 	CALL colon_code
-	DW swap
-	DW s_to_d
-	DW rot
-	DW d_dot_r
-	DW exit
+	DX swap
+	DX s_to_d
+	DX rot
+	DX d_dot_r
+	DX exit
 
 
 	; \ Set border to attr
@@ -2404,18 +2565,18 @@ dot_r:
 brdr_store:
 	CALL colon_code
 	; 7 AND  ULA P@  0xF8 AND  OR  ULA P! ;
-	DW raw_char
+	DX raw_char
 	DB 7
-	DW and
-	DW ula
-	DW p_fetch
-	DW raw_char
+	DX and
+	DX ula
+	DX p_fetch
+	DX raw_char
 	DB 0xF8
-	DW and
-	DW or
-	DW ula
-	DW p_store
-	DW exit
+	DX and
+	DX or
+	DX ula
+	DX p_store
+	DX exit
 
 
 	; \ Clear screen, reset terminal to top-left
@@ -2425,31 +2586,31 @@ page:
 	CALL colon_code
 	; \ Match border to T-ATTR
 	; T-ATTR C@  3 RSHIFT  BRDR!
-	DW t_attr
-	DW c_fetch
-	DW raw_char
+	DX t_attr
+	DX c_fetch
+	DX raw_char
 	DB 3
-	DW rshift
-	DW brdr_store
+	DX rshift
+	DX brdr_store
 	; \ Reset terminal col/row
 	; 0 0 AT-XY
-	DW zero_literal
-	DW zero_literal
-	DW at_xy
+	DX zero_literal
+	DX zero_literal
+	DX at_xy
 	; \ Erase bitmap
 	; DISP-FILE DISP-SIZE ERASE
-	DW disp_file
-	DW disp_size
-	DW erase
+	DX disp_file
+	DX disp_size
+	DX erase
 	; \ Set attr region to current T-ATTR
 	; ATTR-FILE ATTR-SIZE T-ATTR C@ FILL
-	DW attr_file
-	DW attr_size
-	DW t_attr
-	DW c_fetch
-	DW fill
+	DX attr_file
+	DX attr_size
+	DX t_attr
+	DX c_fetch
+	DX fill
 	; ;
-	DW exit
+	DX exit
 
 
 	HEADER u_dollar_dot, "U$.", 0
@@ -2515,10 +2676,10 @@ u_dollar_dot:
 	HEADER abort, "ABORT", 0
 abort:
 	CALL colon_code
-	DW s_zero
-	DW sp_store
-	DW drop
-	DW quit
+	DX s_zero
+	DX sp_store
+	DX drop
+	DX quit
 
 
 	; ( flags --)
@@ -2527,22 +2688,22 @@ abort:
 abort_quote_raw:
 	CALL colon_code
 	; R> COUNT ROT
-	DW r_from
-	DW count
-	DW rot
+	DX r_from
+	DX count
+	DX rot
 	; ( addr u cond)
 	; IF TYPE ABORT THEN
-	DW if_raw
+	DX if_raw
 	DB .then-$-1
-	DW type
-	DW abort
+	DX type
+	DX abort
 .then:
 	; ( addr u)
 	; + >R
-	DW plus
-	DW to_r
+	DX plus
+	DX to_r
 	; ;
-	DW exit
+	DX exit
 
 
 	; : ALLOT ( n -- ) \ Add n to dictionary end pointer
@@ -2550,9 +2711,9 @@ abort_quote_raw:
 allot:
 	CALL colon_code
 	; H +! ;
-	DW h_
-	DW plus_store
-	DW exit
+	DX h_
+	DX plus_store
+	DX exit
 
 
 	HEADER base, "BASE", 0
@@ -2572,11 +2733,11 @@ bl:
 c_comma:
 	CALL colon_code
 	; HERE 1 ALLOT C! ;
-	DW here
-	DW one_literal
-	DW allot
-	DW c_store
-	DW exit
+	DX here
+	DX one_literal
+	DX allot
+	DX c_store
+	DX exit
 
 
 	; : COUNT ( addr -- addr2 u ) \ Get string in counted string
@@ -2584,11 +2745,11 @@ c_comma:
 count:
 	CALL colon_code
 	; DUP 1+ SWAP C@ ;
-	DW dup
-	DW one_plus
-	DW swap
-	DW c_fetch
-	DW exit
+	DX dup
+	DX one_plus
+	DX swap
+	DX c_fetch
+	DX exit
 
 
 	; \ Set BASE to 10
@@ -2597,22 +2758,22 @@ count:
 decimal:
 	CALL colon_code
 	; 10 BASE ! ;
-	DW raw_char
+	DX raw_char
 	DB 10
-	DW base
-	DW store
-	DW exit
+	DX base
+	DX store
+	DX exit
 
 
 	HEADER depth, "DEPTH", 0
 depth:
 	CALL colon_code
-	DW s_zero
-	DW tick_s
-	DW minus
-	DW two_slash
-	DW one_minus
-	DW exit
+	DX s_zero
+	DX tick_s
+	DX minus
+	DX two_slash
+	DX one_minus
+	DX exit
 
 
 	; \ Set BASE to 16
@@ -2621,91 +2782,91 @@ depth:
 hex:
 	CALL colon_code
 	; 16 BASE ! ;
-	DW raw_char
+	DX raw_char
 	DB 16
-	DW base
-	DW store
-	DW exit
+	DX base
+	DX store
+	DX exit
 
 
 	; : MAX 2DUP < IF SWAP THEN DROP ;
 	HEADER max, "MAX", 0
 max:
 	CALL colon_code
-	DW two_dup
-	DW less_than
-	DW if_raw
+	DX two_dup
+	DX less_than
+	DX if_raw
 	DB .skip-$-1
-	DW swap
+	DX swap
 .skip:
-	DW drop
-	DW exit
+	DX drop
+	DX exit
 
 
 	HEADER move, "MOVE", 0
 move:
 	CALL colon_code
 	; : MOVE -ROT 2DUP < IF ROT CMOVE> ELSE ROT CMOVE THEN ;
-	DW minus_rot
-	DW two_dup
-	DW less_than
-	DW if_raw
+	DX minus_rot
+	DX two_dup
+	DX less_than
+	DX if_raw
 	DB .move__else-$-1
-	DW rot
-	DW cmove_up
-	DW else_skip
+	DX rot
+	DX cmove_up
+	DX else_skip
 	DB .move__else_skip-$-1
 .move__else:
-	DW rot
-	DW cmove
+	DX rot
+	DX cmove
 .move__else_skip:
-	DW exit
+	DX exit
 
 
 	; : NEGATE  0 SWAP - ;
 	HEADER negate, "NEGATE", 0
 negate:
 	CALL colon_code
-	DW zero_literal
-	DW swap
-	DW minus
-	DW exit
+	DX zero_literal
+	DX swap
+	DX minus
+	DX exit
 
 
 	; : DNEGATE  0. 2SWAP D- ;
 	HEADER dnegate, "DNEGATE", 0
 dnegate:
 	CALL colon_code
-	DW zero_literal
-	DW zero_literal
-	DW two_swap
-	DW d_minus
-	DW exit
+	DX zero_literal
+	DX zero_literal
+	DX two_swap
+	DX d_minus
+	DX exit
 
 
 	HEADER s_quote_raw, '(S")', 0
 s_quote_raw:
 	CALL colon_code
 	; R> COUNT 2DUP + >R ;
-	DW r_from
-	DW count
-	DW two_dup
-	DW plus
-	DW to_r
-	DW exit
+	DX r_from
+	DX count
+	DX two_dup
+	DX plus
+	DX to_r
+	DX exit
 
 
 	HEADER dot_quote_raw, '(.")', 0
 dot_quote_raw:
 	CALL colon_code
 	; R> COUNT 2DUP + >R TYPE ;
-	DW r_from
-	DW count
-	DW two_dup
-	DW plus
-	DW to_r
-	DW type
-	DW exit
+	DX r_from
+	DX count
+	DX two_dup
+	DX plus
+	DX to_r
+	DX type
+	DX exit
 
 
 	; \ Read a line of input into buffer, return length of line read
@@ -2714,71 +2875,71 @@ dot_quote_raw:
 accept:
 	CALL colon_code
 	; SWAP >R 0
-	DW swap
-	DW to_r
-	DW zero_literal
+	DX swap
+	DX to_r
+	DX zero_literal
 	; ( size idx ) ( R: buf )
 	; BEGIN 2DUP > WHILE
 .begin:
-	DW two_dup
-	DW greater_than
-	DW if_raw
+	DX two_dup
+	DX greater_than
+	DX if_raw
 	DB .repeat-$-1
 		; ( size idx ) ( R: buf )
 		; KEY DUP CASE
-		DW key
-		DW dup
+		DX key
+		DX dup
 			; ( size idx key key ) ( R: buf )
 			; \ Delete: remove character
 			; 8  OF EMIT  1- 0 MAX        ENDOF
-			DW raw_char
+			DX raw_char
 			DB 8
-			DW of_raw
+			DX of_raw
 			DB .endof1-$-1
-			DW emit
-			DW one_minus
-			DW zero_literal
-			DW max
-			DW else_skip
+			DX emit
+			DX one_minus
+			DX zero_literal
+			DX max
+			DX else_skip
 			DB .endcase-$-1
 .endof1:
 			; \ Enter: finish input
 			; 10 OF DROP NIP R> DROP EXIT ENDOF
-			DW raw_char
+			DX raw_char
 			DB 10
-			DW of_raw
+			DX of_raw
 			DB .endof2-$-1
-			DW drop
-			DW nip
-			DW r_from
-			DW drop
+			DX drop
+			DX nip
+			DX r_from
+			DX drop
 
-			DW exit
-			DW else_skip
+			DX exit
+			DX else_skip
 			DB .endcase-$-1
 .endof2:
 			; \ default: output character
 			; EMIT OVER R@ + C!  1+
-			DW emit
-			DW over
-			DW r_fetch
-			DW plus
-			DW c_store
-			DW one_plus
+			DX emit
+			DX over
+			DX r_fetch
+			DX plus
+			DX c_store
+			DX one_plus
 		; 0 ENDCASE
-		DW zero_literal
-		DW drop
+		DX zero_literal
+		DX drop
 .endcase:
 	; REPEAT
-	DW again_raw
+	DX again_raw
 	DB .begin-$+256
 .repeat:
 	; ( size idx ) ( R: buf )
 	; R> DROP NIP ;
-	DW r_from
-	DW drop
-	DW nip
-	DW exit
+	DX r_from
+	DX drop
+	DX nip
+	DX exit
 
 
 	; \ Read a line of input into -IN
@@ -2787,11 +2948,11 @@ accept:
 line_read:
 	CALL colon_code
 	; -IN DUP -IN# ACCEPT ;
-	DW line_in
-	DW dup
-	DW line_in_size
-	DW accept
-	DW exit
+	DX line_in
+	DX dup
+	DX line_in_size
+	DX accept
+	DX exit
 
 
 	; ( addr u -- addr u 0 | xt 1 | xt -1 )
@@ -2877,22 +3038,22 @@ sfind:
 find:
 	CALL colon_code
 	; COUNT SFIND
-	DW count
-	DW sfind
+	DX count
+	DX sfind
 	; ( addr u 0 | xt 1 | xt -1)
 	; ?DUP 0= IF
-	DW question_dup
-	DW zero_equals
-	DW if_raw
+	DX question_dup
+	DX zero_equals
+	DX if_raw
 	DB .then-$-1
 		; ( addr u)
 		; DROP 1- 0
-		DW drop
-		DW one_minus
-		DW zero_literal
+		DX drop
+		DX one_minus
+		DX zero_literal
 	; THEN ;
 .then:
-	DW exit
+	DX exit
 
 
 	; \ See next parse character or 0 if parse area empty
@@ -2901,33 +3062,33 @@ find:
 ppeek:
 	CALL colon_code
 	; >IN @
-	DW to_in
-	DW fetch
+	DX to_in
+	DX fetch
 	; ( >IN-val)
 	; DUP  IN# @  < IF
-	DW dup
-	DW in_size
-	DW fetch
-	DW less_than
-	DW if_raw
+	DX dup
+	DX in_size
+	DX fetch
+	DX less_than
+	DX if_raw
 	DB .else-$-1
 		; 'IN @ + C@
-		DW tick_in
-		DW fetch
-		DW plus
-		DW c_fetch
+		DX tick_in
+		DX fetch
+		DX plus
+		DX c_fetch
 		; ( c)
 	; ELSE
-	DW else_skip
+	DX else_skip
 	DB .then-$-1
 .else:
 		; DROP 0
-		DW drop
-		DW zero_literal
+		DX drop
+		DX zero_literal
 		; ( 0)
 	; THEN ;
 .then:
-	DW exit
+	DX exit
 
 
 	; \ Parse character or 0 if parse area empty
@@ -2936,15 +3097,15 @@ ppeek:
 pchar:
 	CALL colon_code
 	; PPEEK DUP IF 1 >IN +! THEN ;
-	DW ppeek
-	DW dup
-	DW if_raw
+	DX ppeek
+	DX dup
+	DX if_raw
 	DB .then-$-1
-	DW one_literal
-	DW to_in
-	DW plus_store
+	DX one_literal
+	DX to_in
+	DX plus_store
 .then:
-	DW exit
+	DX exit
 
 
 	; \ Parse a string from parse area, and return address/length of it in
@@ -2955,44 +3116,44 @@ pchar:
 parse:
 	CALL colon_code
 	; 'IN @ >IN @ +
-	DW tick_in
-	DW fetch
-	DW to_in
-	DW fetch
-	DW plus
+	DX tick_in
+	DX fetch
+	DX to_in
+	DX fetch
+	DX plus
 	; ( c addr)
 	; 0 ROT
-	DW zero_literal
-	DW rot
+	DX zero_literal
+	DX rot
 	; ( addr u c)
 	; BEGIN
 .begin:
 		; \ Stop when empty
 		; PCHAR ?DUP WHILE
-		DW pchar
-		DW question_dup
-		DW if_raw
+		DX pchar
+		DX question_dup
+		DX if_raw
 		DB .repeat-$-1
 		; ( addr u c p)
 		; \ Stop when delimiter
 		; OVER <> WHILE
-		DW over
-		DW not_equals
-		DW if_raw
+		DX over
+		DX not_equals
+		DX if_raw
 		DB .repeat-$-1
 		; ( addr u c)
 		; \ Increment length
 		; SWAP 1+ SWAP
-		DW swap
-		DW one_plus
-		DW swap
+		DX swap
+		DX one_plus
+		DX swap
 	; REPEAT THEN
-	DW again_raw
+	DX again_raw
 	DB .begin-$+256
 .repeat:
 	; DROP ;
-	DW drop
-	DW exit
+	DX drop
+	DX exit
 
 	; \ Parse and skip a string of delimiters
 	; ( c "<c's>" --)
@@ -3003,26 +3164,26 @@ pskip:
 	; BEGIN
 .begin:
 		; PPEEK ?DUP WHILE
-		DW ppeek
-		DW question_dup
-		DW if_raw
+		DX ppeek
+		DX question_dup
+		DX if_raw
 		DB .then-$-1
 		; OVER = WHILE
-		DW over
-		DW equals
-		DW if_raw
+		DX over
+		DX equals
+		DX if_raw
 		DB .then-$-1
 		; 1 >IN +!
-		DW one_literal
-		DW to_in
-		DW plus_store
+		DX one_literal
+		DX to_in
+		DX plus_store
 	; REPEAT THEN
-	DW again_raw
+	DX again_raw
 	DB .begin-$+256
 .then:
 	; DROP ;
-	DW drop
-	DW exit
+	DX drop
+	DX exit
 
 
 	; \ Parse a string from parse area, skipping preceding delimiters, and
@@ -3034,12 +3195,12 @@ parse_word:
 	CALL colon_code
 	; \ Skip preceding delimiters
 	; DUP PSKIP
-	DW dup
-	DW pskip
+	DX dup
+	DX pskip
 	; \ Parse rest
 	; PARSE ;
-	DW parse
-	DW exit
+	DX parse
+	DX exit
 
 
 	; \ Parse a name from parse area, and return address/length of it in
@@ -3049,9 +3210,9 @@ parse_word:
 	HEADER parse_name, "PARSE-NAME", 0
 parse_name:
 	CALL colon_code
-	DW bl
-	DW parse_word
-	DW exit
+	DX bl
+	DX parse_word
+	DX exit
 
 
 	; \ Parse counted string www, terminated by c
@@ -3060,36 +3221,36 @@ parse_name:
 cparse:
 	CALL colon_code
 	; PARSE
-	DW parse
+	DX parse
 	; ( addr u)
 	; DUP 256 >= ABORT" long name"
-	DW dup
-	DW literal_raw
+	DX dup
+	DX literal_raw
 	DW 256
-	DW greater_than_or_equal
-	DW abort_quote_raw
+	DX greater_than_or_equal
+	DX abort_quote_raw
 	DB .e1-.s1
 .s1:
 	DM "long name"
 .e1:
 	; TUCK
-	DW tuck
+	DX tuck
 	; ( u addr u)
 	; 'WORD 1+ SWAP
-	DW tick_word
-	DW one_plus
-	DW swap
+	DX tick_word
+	DX one_plus
+	DX swap
 	; ( u addr addr2 u)
 	; CMOVE
-	DW cmove
+	DX cmove
 	; ( u)
 	; 'WORD C!
-	DW tick_word
-	DW c_store
+	DX tick_word
+	DX c_store
 	; ( )
 	; 'WORD ;
-	DW tick_word
-	DW exit
+	DX tick_word
+	DX exit
 
 
 	; \ Parse counted string www, delimited by c
@@ -3100,12 +3261,12 @@ word:
 	CALL colon_code
 	; \ Ignore initial delimiters
 	; DUP PSKIP
-	DW dup
-	DW pskip
+	DX dup
+	DX pskip
 	; \ Parse
 	; CPARSE ;
-	DW cparse
-	DW exit
+	DX cparse
+	DX exit
 
 
 	; \ Check if a character is a valid double number punctuator
@@ -3116,66 +3277,66 @@ num_punc_question:
 	CALL colon_code
 	; CASE
 		; [CHAR] , OF TRUE ENDOF
-		DW raw_char
+		DX raw_char
 		DB ','
-		DW of_raw
+		DX of_raw
 		DB .endof1-$-1
-		DW true
-		DW else_skip
+		DX true
+		DX else_skip
 		DB .endcase-$-1
 .endof1:
 		; [CHAR] . OF TRUE ENDOF
-		DW raw_char
+		DX raw_char
 		DB '.'
-		DW of_raw
+		DX of_raw
 		DB .endof2-$-1
-		DW true
-		DW else_skip
+		DX true
+		DX else_skip
 		DB .endcase-$-1
 .endof2:
 		; [CHAR] + OF TRUE ENDOF
-		DW raw_char
+		DX raw_char
 		DB '+'
-		DW of_raw
+		DX of_raw
 		DB .endof3-$-1
-		DW true
-		DW else_skip
+		DX true
+		DX else_skip
 		DB .endcase-$-1
 .endof3:
 		; [CHAR] - OF TRUE ENDOF
-		DW raw_char
+		DX raw_char
 		DB '-'
-		DW of_raw
+		DX of_raw
 		DB .endof4-$-1
-		DW true
-		DW else_skip
+		DX true
+		DX else_skip
 		DB .endcase-$-1
 .endof4:
 		; [CHAR] / OF TRUE ENDOF
-		DW raw_char
+		DX raw_char
 		DB '/'
-		DW of_raw
+		DX of_raw
 		DB .endof5-$-1
-		DW true
-		DW else_skip
+		DX true
+		DX else_skip
 		DB .endcase-$-1
 .endof5:
 		; [CHAR] : OF TRUE ENDOF
-		DW raw_char
+		DX raw_char
 		DB ':'
-		DW of_raw
+		DX of_raw
 		DB .endof6-$-1
-		DW true
-		DW else_skip
+		DX true
+		DX else_skip
 		DB .endcase-$-1
 .endof6:
 		; FALSE SWAP
-		DW false
-		DW swap
+		DX false
+		DX swap
 	; ENDCASE ;
-	DW drop
+	DX drop
 .endcase:
-	DW exit
+	DX exit
 
 
 	; ( ud addr u -- ud2 addr2 u2)
@@ -3185,94 +3346,94 @@ to_number:
 	CALL colon_code
 	; \ Loop while chars remaining
 	; DUP IF BEGIN
-	DW dup
-	DW if_raw
+	DX dup
+	DX if_raw
 	DB .then_skip-$-1
 .begin:
 		; \ Get char
 		; OVER C@
-		DW over
-		DW c_fetch
+		DX over
+		DX c_fetch
 		; ( ud addr u c)
 		; \ Handle 0-9 / a-z apart
 		; DUP [CHAR] 0 [ CHAR 9 1+ ] LITERAL WITHIN IF
-		DW dup
-		DW raw_char
+		DX dup
+		DX raw_char
 		DB '0'
-		DW raw_char
+		DX raw_char
 		DB '9'+1
-		DW within
-		DW if_raw
+		DX within
+		DX if_raw
 		DB .else-$-1
 			; \ Convert char to number
 			; [CHAR] 0 -
-			DW raw_char
+			DX raw_char
 			DB '0'
-			DW minus
+			DX minus
 			; ( ud addr u n)
 		; ELSE
-		DW else_skip
+		DX else_skip
 		DB .then_apart-$-1
 .else:
 			; \ Convert char to number
 			; [ CHAR A 10 - ] -
-			DW raw_char
+			DX raw_char
 			DB 'A'-10
-			DW minus
+			DX minus
 			; ( ud addr u n)
 		; THEN
 .then_apart:
 		; \ Must be within current base
 		; DUP BASE @ 0 WITHIN IF DROP EXIT THEN
-		DW dup
-		DW base
-		DW fetch
-		DW zero_literal
-		DW within
-		DW if_raw
+		DX dup
+		DX base
+		DX fetch
+		DX zero_literal
+		DX within
+		DX if_raw
 		DB .then_base-$-1
-		DW drop
-		DW exit
+		DX drop
+		DX exit
 .then_base:
 		; 0 2ROT
-		DW zero_literal
-		DW two_rot
+		DX zero_literal
+		DX two_rot
 		; ( addr u dn ud)
 		; \ Multiply current number by base
 		; BASE @ 1 M*/
-		DW base
-		DW fetch
-		DW one_literal
-		DW m_star_slash
+		DX base
+		DX fetch
+		DX one_literal
+		DX m_star_slash
 		; \ Add digit to current number
 		; D+ 2SWAP
-		DW d_plus
-		DW two_swap
+		DX d_plus
+		DX two_swap
 		; ( ud addr u)
 		; \ Next char
 		; SWAP 1+ SWAP 1-
-		DW swap
-		DW one_plus
-		DW swap
-		DW one_minus
+		DX swap
+		DX one_plus
+		DX swap
+		DX one_minus
 	; DUP 0= UNTIL THEN ;
-	DW dup
-	DW zero_equals
-	DW until_raw
+	DX dup
+	DX zero_equals
+	DX until_raw
 	DB .begin-$+256
 .then_skip:
-	DW exit
+	DX exit
 
 
 	; \ Type a string with question mark and abort
 	; ( addr u --)
-	; : WHAT? TYPE TRUE ABORT" ?" ; -2 ALLOT
+	; : WHAT? TYPE TRUE ABORT" ?" ; -? ALLOT
 	HEADER what_question, "WHAT?", 0
 what_question:
 	CALL colon_code
-	DW type
-	DW true
-	DW abort_quote_raw
+	DX type
+	DX true
+	DX abort_quote_raw
 	DB .s2-.s1
 .s1:
 	DM "?"
@@ -3281,12 +3442,12 @@ what_question:
 
 	; \ Type a counted string with question mark and abort
 	; ( c-addr --)
-	; : CWHAT? COUNT WHAT? ; -2 ALLOT
+	; : CWHAT? COUNT WHAT? ; -? ALLOT
 	HEADER cwhat_question, "CWHAT?", 0
 cwhat_question:
 	CALL colon_code
-	DW count
-	DW what_question
+	DX count
+	DX what_question
 
 
 	; \ Parse single or double number from counted string
@@ -3296,53 +3457,53 @@ cwhat_question:
 number:
 	CALL colon_code
 	; DUP COUNT
-	DW dup
-	DW count
+	DX dup
+	DX count
 	; ( c-addr addr u)
 	; \ Fail on empty string
 	; ?DUP 0= IF DROP ABORT-TYPE THEN
-	DW question_dup
-	DW zero_equals
-	DW if_raw
+	DX question_dup
+	DX zero_equals
+	DX if_raw
 	DB .then_empty-$-1
-	DW drop
-	DW cwhat_question
+	DX drop
+	DX cwhat_question
 .then_empty:
 	; \ Ignore first char addr/u if '-'
 	; OVER C@ [CHAR] - = IF
-	DW over
-	DW c_fetch
-	DW raw_char
+	DX over
+	DX c_fetch
+	DX raw_char
 	DB '-'
-	DW equals
-	DW if_raw
+	DX equals
+	DX if_raw
 	DB .then_ignore_minus-$-1
 		; SWAP 1+ SWAP 1-
-		DW swap
-		DW one_plus
-		DW swap
-		DW one_minus
+		DX swap
+		DX one_plus
+		DX swap
+		DX one_minus
 	; THEN
 .then_ignore_minus:
 	; \ Fail on empty string
 	; ?DUP 0= IF DROP ABORT-TYPE THEN
-	DW question_dup
-	DW zero_equals
-	DW if_raw
+	DX question_dup
+	DX zero_equals
+	DX if_raw
 	DB .then_empty2-$-1
-	DW drop
-	DW cwhat_question
+	DX drop
+	DX cwhat_question
 .then_empty2:
 	; 0. 2SWAP
-	DW zero_literal
-	DW zero_literal
-	DW two_swap
+	DX zero_literal
+	DX zero_literal
+	DX two_swap
 	; ( c-addr d-num addr u)
 	; \ Attempt conversion
 	; >NUMBER ?DUP IF
-	DW to_number
-	DW question_dup
-	DW if_raw
+	DX to_number
+	DX question_dup
+	DX if_raw
 	DB .else_single-$-1
 		; ( c-addr d-num addr u)
 		; \ Characters remain: double or bad char
@@ -3350,96 +3511,116 @@ number:
 .begin:
 			; \ Check for bad char
 			; OVER C@ NUM-PUNC? 0= IF
-			DW over
-			DW c_fetch
-			DW num_punc_question
-			DW zero_equals
-			DW if_raw
+			DX over
+			DX c_fetch
+			DX num_punc_question
+			DX zero_equals
+			DX if_raw
 			DB .then_bad-$-1
 				; 2DROP 2DROP ABORT-TYPE
-				DW two_drop
-				DW two_drop
-				DW cwhat_question
+				DX two_drop
+				DX two_drop
+				DX cwhat_question
 			; THEN
 .then_bad:
 			; \ Advance char
 			; SWAP 1+ SWAP 1-
-			DW swap
-			DW one_plus
-			DW swap
-			DW one_minus
+			DX swap
+			DX one_plus
+			DX swap
+			DX one_minus
 			; \ Check remaining
 			; ?DUP WHILE
-			DW question_dup
-			DW if_raw
+			DX question_dup
+			DX if_raw
 			DB .repeat-$-1
 			; \ Convert more and check remaining
 			; >NUMBER ?DUP WHILE
-			DW to_number
-			DW question_dup
-			DW if_raw
+			DX to_number
+			DX question_dup
+			DX if_raw
 			DB .repeat-$-1
 		; REPEAT THEN
-		DW again_raw
+		DX again_raw
 		DB .begin-$+256
 .repeat:
 		; ( c-addr d-num addr)
 		; DROP ROT
-		DW drop
-		DW rot
+		DX drop
+		DX rot
 		; ( d-num c-addr)
 		; \ If first char '-' negate
 		; 1+ C@ [CHAR] - = IF DNEGATE THEN
-		DW one_plus
-		DW c_fetch
-		DW raw_char
+		DX one_plus
+		DX c_fetch
+		DX raw_char
 		DB '-'
-		DW equals
-		DW if_raw
+		DX equals
+		DX if_raw
 		DB .then_negate-$-1
-		DW dnegate
+		DX dnegate
 .then_negate:
 		; ( d-num)
 		; TRUE
 		; ( d-num true)
-		DW true
+		DX true
 	; ELSE
-	DW else_skip
+	DX else_skip
 	DB .then_single-$-1
 .else_single:
 		; ( c-addr d-num addr)
 		; \ No chars remain: single
 		; 2DROP SWAP
-		DW two_drop
-		DW swap
+		DX two_drop
+		DX swap
 		; ( num c-addr)
 		; \ Check for '-'
 		; 1+ C@ [CHAR] - = IF NEGATE THEN
-		DW one_plus
-		DW c_fetch
-		DW raw_char
+		DX one_plus
+		DX c_fetch
+		DX raw_char
 		DB '-'
-		DW equals
-		DW if_raw
+		DX equals
+		DX if_raw
 		DB .then_negate2-$-1
-		DW negate
+		DX negate
 .then_negate2:
 		; ( num)
 		; FALSE
 		; ( d-num false)
-		DW false
+		DX false
 	; THEN ;
 .then_single:
-	DW exit
+	DX exit
+
+
+	; \ Start of tokens vector
+	; ??? TOKS CONSTANT
+	HEADER toks, "TOKS", 0
+toks:
+	CALL constant_code
+	DW tokens
 
 
 	; ( xt -- )
-	; : COMPILE, , ;
+	; : COMPILE,
 	HEADER compile_comma, "COMPILE,", 0
 compile_comma:
 	CALL colon_code
-	DW comma
-	DW exit
+	IF tokenised
+		; DUP 8 RSHIFT C, C, ;
+		DX dup
+		DX raw_char
+		DB 8
+		DX rshift
+		DX c_comma
+		DX c_comma
+		DX exit
+	ELSE
+		; , ;
+		DX comma
+		DX exit
+	ENDIF
 
 
 	; : lower ( C -- c )
@@ -3447,21 +3628,21 @@ compile_comma:
 lower:
 	CALL colon_code
 	; dup [CHAR] A [ CHAR Z 1+ ] LITERAL within IF
-	DW dup
-	DW raw_char
+	DX dup
+	DX raw_char
 	DB 'A'
-	DW raw_char
+	DX raw_char
 	DB 'Z' + 1
-	DW within
-	DW if_raw
+	DX within
+	DX if_raw
 	DB .then-$-1
 		; [ CHAR A CHAR a - ] LITERAL +
-		DW raw_char
+		DX raw_char
 		DB 'a' - 'A'
-		DW plus
+		DX plus
 	; THEN ;
 .then:
-	DW exit
+	DX exit
 
 
 	; \ Convert lowercase letters to uppercase (or do nothing)
@@ -3470,38 +3651,38 @@ lower:
 upper:
 	CALL colon_code
 	; DUP [CHAR] a [ CHAR z 1+ ] LITERAL within IF
-	DW dup
-	DW raw_char
+	DX dup
+	DX raw_char
 	DB 'a'
-	DW raw_char
+	DX raw_char
 	DB 'z' + 1
-	DW within
-	DW if_raw
+	DX within
+	DX if_raw
 	DB .then-$-1
 		; [ 'A' 'a' - ] LITERAL +
-		DW literal_raw
+		DX literal_raw
 		DW 'A' - 'a'
-		DW plus
+		DX plus
 	; THEN ;
 .then:
-	DW exit
+	DX exit
 
 
 	; : ERASE 0 FILL ;
 	HEADER erase, "ERASE", 0
 erase:
 	CALL colon_code
-	DW zero_literal
-	DW fill
-	DW exit
+	DX zero_literal
+	DX fill
+	DX exit
 
 
 	HEADER space, "SPACE", 0
 space:
 	CALL colon_code
-	DW bl
-	DW emit
-	DW exit
+	DX bl
+	DX emit
+	DX exit
 
 
 	; : SPACES ( n -- ) \ Print n spaces
@@ -3509,18 +3690,18 @@ space:
 spaces:
 	CALL colon_code
 	; 0 MAX
-	DW zero_literal
-	DW max
+	DX zero_literal
+	DX max
 	; 0 ?DO SPACE LOOP ;
-	DW zero_literal
-	DW question_do_raw
+	DX zero_literal
+	DX question_do_raw
 	DB .loop-$-1
 .do:
-	DW space
-	DW loop_raw
+	DX space
+	DX loop_raw
 	DB .do-$+256
 .loop:
-	DW exit
+	DX exit
 
 
 	HEADER s_zero, "S0", 0
@@ -3552,26 +3733,26 @@ ula:
 d_plus_store:
 	CALL colon_code
 	; TUCK2 2@ D+ ROT 2! ;
-	DW tuck2
-	DW two_fetch
-	DW d_plus
-	DW rot
-	DW two_store
-	DW exit
+	DX tuck2
+	DX two_fetch
+	DX d_plus
+	DX rot
+	DX two_store
+	DX exit
 
 
 	; : (2LITERAL)  R>  DUP [ 2 CELLS ] LITERAL + >R  2@  ;
 	HEADER two_literal_raw, "(2LITERAL)", 0
 two_literal_raw:
 	CALL colon_code
-	DW r_from
-	DW dup
-	DW raw_char
+	DX r_from
+	DX dup
+	DX raw_char
 	DB 4
-	DW plus
-	DW to_r
-	DW two_fetch
-	DW exit
+	DX plus
+	DX to_r
+	DX two_fetch
+	DX exit
 
 
 	; AT-XY ( x y -- ) \ Set next terminal x,y position
@@ -3579,21 +3760,21 @@ two_literal_raw:
 at_xy:
 	CALL colon_code
 	; ( y ) 0 23 CLAMP T-ROW C!
-	DW zero_literal
-	DW raw_char
+	DX zero_literal
+	DX raw_char
 	DB 23
-	DW clamp
-	DW t_row
-	DW c_store
+	DX clamp
+	DX t_row
+	DX c_store
 	; ( x ) 0 31 CLAMP T-COL C!
-	DW zero_literal
-	DW raw_char
+	DX zero_literal
+	DX raw_char
 	DB 31
-	DW clamp
-	DW t_col
-	DW c_store
+	DX clamp
+	DX t_col
+	DX c_store
 	; ;
-	DW exit
+	DX exit
 
 
 	HEADER keyq_len, "KEYQ-LEN", 0
@@ -3629,12 +3810,12 @@ keyq_e:
 ekey_question:
 	CALL colon_code
 	; KEYQ-E C@ KEYQ-S C@ <> ;
-	DW keyq_e
-	DW c_fetch
-	DW keyq_s
-	DW c_fetch
-	DW not_equals
-	DW exit
+	DX keyq_e
+	DX c_fetch
+	DX keyq_s
+	DX c_fetch
+	DX not_equals
+	DX exit
 
 
 	; 0<> ( n -- flags ) \ true if n is not equal to 0
@@ -3642,9 +3823,9 @@ ekey_question:
 zero_not_equals:
 	CALL colon_code
 	; 0= INVERT ;
-	DW zero_equals
-	DW invert
-	DW exit
+	DX zero_equals
+	DX invert
+	DX exit
 
 
 	; <> ( n1 n2 -- flags ) \ true if n1 is not equal to n2
@@ -3652,9 +3833,9 @@ zero_not_equals:
 not_equals:
 	CALL colon_code
 	; = INVERT ;
-	DW equals
-	DW invert
-	DW exit
+	DX equals
+	DX invert
+	DX exit
 
 
 	; CLAMP ( n1 n2 n3 -- n ) \ Force n1 to range [n2, n3]
@@ -3662,10 +3843,10 @@ not_equals:
 clamp:
 	CALL colon_code
 	; ROT MIN MAX ;
-	DW rot
-	DW min
-	DW max
-	DW exit
+	DX rot
+	DX min
+	DX max
+	DX exit
 
 
 	; : MIN ( n1 n2 -- n ) \ Leave the smaller of n1 and n2
@@ -3673,14 +3854,14 @@ clamp:
 min:
 	CALL colon_code
 	; 2DUP > IF SWAP THEN DROP ;
-	DW two_dup
-	DW greater_than
-	DW if_raw
+	DX two_dup
+	DX greater_than
+	DX if_raw
 	DB .skip-$-1
-	DW swap
+	DX swap
 .skip:
-	DW drop
-	DW exit
+	DX drop
+	DX exit
 
 
 	; \ Store CAPS LOCK state
@@ -3697,44 +3878,44 @@ ekey:
 	CALL colon_code
 	; BEGIN EKEY? HALT UNTIL \ Block for event
 .begin:
-	DW ekey_question
-	DW halt_
-	DW until_raw
+	DX ekey_question
+	DX halt_
+	DX until_raw
 	DB .begin-$+256
 	; KEYQ KEYQ-S C@ CELLS + @ \ Receive event
-	DW keyq
-	DW keyq_s
-	DW c_fetch
-	DW two_star
-	DW plus
-	DW fetch
+	DX keyq
+	DX keyq_s
+	DX c_fetch
+	DX two_star
+	DX plus
+	DX fetch
 	; KEYQ-S C@ 1+ 7 AND KEYQ-S C! \ Increment KEYQ-S (mod 8)
-	DW keyq_s
-	DW c_fetch
-	DW one_plus
-	DW raw_char
+	DX keyq_s
+	DX c_fetch
+	DX one_plus
+	DX raw_char
 	DB 7
-	DW and
-	DW keyq_s
-	DW c_store
+	DX and
+	DX keyq_s
+	DX c_store
 	; \ If CAPS LOCK then toggle CAPS
 	; DUP $11C = IF
-	DW dup
-	DW literal_raw
+	DX dup
+	DX literal_raw
 	DW 0x11C
-	DW equals
-	DW if_raw
+	DX equals
+	DX if_raw
 	DB .then-$-1
 		; CAPS C@ 0= CAPS C!
-		DW caps
-		DW c_fetch
-		DW zero_equals
-		DW caps
-		DW c_store
+		DX caps
+		DX c_fetch
+		DX zero_equals
+		DX caps
+		DX c_store
 	; THEN
 .then:
 	; ;
-	DW exit
+	DX exit
 
 
 	; \ Address of the character key map in ROM
@@ -3837,106 +4018,106 @@ ekey_to_char:
 	CALL colon_code
 	; \ Get offset byte
 	; DUP $FF AND
-	DW dup
-	DW raw_char
+	DX dup
+	DX raw_char
 	DB 0xFF
-	DW and
+	DX and
 	; \ If shift active...
 	; 2DUP <> IF
-	DW two_dup
-	DW not_equals
-	DW if_raw
+	DX two_dup
+	DX not_equals
+	DX if_raw
 	DB .then1-$-1
 		; \ If symbol shift, add 80, otherwise 40
 		; OVER $200 AND  80 40 CHOOSE  +
-		DW over
-		DW literal_raw
+		DX over
+		DX literal_raw
 		DW 0x200
-		DW and
-		DW raw_char
+		DX and
+		DX raw_char
 		DB 80
-		DW raw_char
+		DX raw_char
 		DB 40
-		DW choose
-		DW plus
+		DX choose
+		DX plus
 	; THEN
 .then1:
 	; CHARS KMAP + C@ ?DUP IF
-	DW kmap
-	DW plus
-	DW c_fetch
-	DW question_dup
-	DW if_raw
+	DX kmap
+	DX plus
+	DX c_fetch
+	DX question_dup
+	DX if_raw
 	DB .else1-$-1
 		; NIP
-		DW nip
+		DX nip
 		; \ Invert case if CAPS
 		; CAPS C@ IF
-		DW caps
-		DW c_fetch
-		DW if_raw
+		DX caps
+		DX c_fetch
+		DX if_raw
 		DB .then_caps-$-1
 			; DUP [CHAR] A [ CHAR Z 1+ ] LITERAL WITHIN IF
-			DW dup
-			DW raw_char
+			DX dup
+			DX raw_char
 			DB 'A'
-			DW raw_char
+			DX raw_char
 			DB 'Z' + 1
-			DW within
-			DW if_raw
+			DX within
+			DX if_raw
 			DB .else_invert_case-$-1
 				; [ CHAR a CHAR A - ] LITERAL +
-				DW raw_char
+				DX raw_char
 				DB 'a' - 'A'
-				DW plus
+				DX plus
 			; ELSE DUP [CHAR] a [ CHAR z 1+ ] LITERAL WITHIN IF
-			DW else_skip
+			DX else_skip
 			DB .then_invert_case-$-1
 .else_invert_case:
-			DW dup
-			DW raw_char
+			DX dup
+			DX raw_char
 			DB 'a'
-			DW raw_char
+			DX raw_char
 			DB 'z' + 1
-			DW within
-			DW if_raw
+			DX within
+			DX if_raw
 			DB .then_invert_case-$-1
 				; [ CHAR A CHAR a - ] LITERAL +
-				DW literal_raw
+				DX literal_raw
 				DW 'A' - 'a'
-				DW plus
+				DX plus
 			; THEN THEN
 .then_invert_case:
 		; THEN
 .then_caps:
 		; TRUE
-		DW true
+		DX true
 	; ELSE
-	DW else_skip
+	DX else_skip
 	DB .then2-$-1
 .else1:
 		; FALSE
-		DW zero_literal
+		DX zero_literal
 	; THEN
 .then2:
 	; ;
-	DW exit
+	DX exit
 
 
 	HEADER less_than_or_equal, "<=", 0
 less_than_or_equal:
 	CALL colon_code
-	DW greater_than
-	DW zero_equals
-	DW exit
+	DX greater_than
+	DX zero_equals
+	DX exit
 
 
 	HEADER greater_than_or_equal, ">=", 0
 greater_than_or_equal:
 	CALL colon_code
-	DW less_than
-	DW zero_equals
-	DW exit
+	DX less_than
+	DX zero_equals
+	DX exit
 
 
 	; CREATE KSHIFT-STATE 0 C,
@@ -4097,11 +4278,11 @@ kscan:
 bit_:
 	CALL colon_code
 	; 1 SWAP LSHIFT AND ;
-	DW one_literal
-	DW swap
-	DW lshift
-	DW and
-	DW exit
+	DX one_literal
+	DX swap
+	DX lshift
+	DX and
+	DX exit
 
 
 	; : CHOOSE ( flags x1 x2 -- x1|x2 ) \ Select x1 if flags true, o/w x2
@@ -4109,13 +4290,13 @@ bit_:
 choose:
 	CALL colon_code
 	; ROT IF SWAP THEN NIP ;
-	DW rot
-	DW if_raw
+	DX rot
+	DX if_raw
 	DB .then-$-1
-	DW swap
+	DX swap
 .then:
-	DW nip
-	DW exit
+	DX nip
+	DX exit
 
 
 	; : 2OR ( d1 d2 -- d1|d2 ) \ OR of doubles
@@ -4123,12 +4304,12 @@ choose:
 two_or:
 	CALL colon_code
 	; ROT OR -ROT OR SWAP ;
-	DW rot
-	DW or
-	DW minus_rot
-	DW or
-	DW swap
-	DW exit
+	DX rot
+	DX or
+	DX minus_rot
+	DX or
+	DX swap
+	DX exit
 
 
 	; : D0< ( d -- flags ) \ Is a double integer negative?
@@ -4136,9 +4317,9 @@ two_or:
 d_zero_less:
 	CALL colon_code
 	; NIP 0< ;
-	DW nip
-	DW zero_less
-	DW exit
+	DX nip
+	DX zero_less
+	DX exit
 
 
 	; : 2ROT ( d1 d2 d3 -- d2 d3 d1 )
@@ -4146,11 +4327,11 @@ d_zero_less:
 two_rot:
 	CALL colon_code
 	; 2>R 2SWAP 2R> 2SWAP ;
-	DW two_to_r
-	DW two_swap
-	DW two_r_from
-	DW two_swap
-	DW exit
+	DX two_to_r
+	DX two_swap
+	DX two_r_from
+	DX two_swap
+	DX exit
 
 
 	; : 2-ROT ( d1 d2 d3 -- d3 d1 d2 )
@@ -4158,11 +4339,11 @@ two_rot:
 two_minus_rot:
 	CALL colon_code
 	; 2SWAP 2>R 2SWAP 2R> ;
-	DW two_swap
-	DW two_to_r
-	DW two_swap
-	DW two_r_from
-	DW exit
+	DX two_swap
+	DX two_to_r
+	DX two_swap
+	DX two_r_from
+	DX exit
 
 
 	; : D<
@@ -4170,40 +4351,27 @@ two_minus_rot:
 d_less_than:
 	CALL colon_code
 	; 2SWAP $80000000. D+ 2SWAP $80000000. D+ DU< ;
-	DW two_swap
-	DW two_literal_raw
+	DX two_swap
+	DX two_literal_raw
 	DW 0x8000
 	DW 0
-	DW d_plus
-	DW two_swap
-	DW two_literal_raw
+	DX d_plus
+	DX two_swap
+	DX two_literal_raw
 	DW 0x8000
 	DW 0
-	DW d_plus
-	DW du_less_than
-	DW exit
-
-
-	; : 2OVER2 ( d1 d2 d3 -- d1 d2 d3 d1 )
-	HEADER two_over_two, "2OVER2", 0
-two_over_two:
-	CALL colon_code
-	; 'S 8 + 2@ ;
-	DW tick_s
-	DW raw_char
-	DB 8
-	DW plus
-	DW two_fetch
-	DW exit
+	DX d_plus
+	DX du_less_than
+	DX exit
 
 
 	; : D0= OR 0= ;
 	HEADER d_zero_equals, "D0=", 0
 d_zero_equals:
 	CALL colon_code
-	DW or
-	DW zero_equals
-	DW exit
+	DX or
+	DX zero_equals
+	DX exit
 
 
 	; : TONE  ( len period -- ) \ Make an accurate tone, masking interrupts
@@ -4211,10 +4379,10 @@ d_zero_equals:
 tone:
 	CALL colon_code
 	; DI ITONE EI ;
-	DW _di
-	DW itone
-	DW _ei
-	DW exit
+	DX _di
+	DX itone
+	DX _ei
+	DX exit
 
 
 	; : CLICK ( -- ) \ Make a 'click' noise
@@ -4222,12 +4390,12 @@ tone:
 click:
 	CALL colon_code
 	; 4 30 ITONE ;
-	DW raw_char
+	DX raw_char
 	DB 4
-	DW raw_char
+	DX raw_char
 	DB 30
-	DW itone
-	DW exit
+	DX itone
+	DX exit
 
 
 	; \ Print current state of stack
@@ -4237,48 +4405,48 @@ dot_s:
 	CALL colon_code
 	; \ Print size of stack in brackets
 	; ." <"  DEPTH 0 .R  ." > "
-	DW dot_quote_raw
+	DX dot_quote_raw
 	DB .e1-.s1
 .s1:
 	DM "<"
 .e1:
-	DW depth
-	DW zero_literal
-	DW dot_r
-	DW dot_quote_raw
+	DX depth
+	DX zero_literal
+	DX dot_r
+	DX dot_quote_raw
 	DB .e2-.s2
 .s2:
 	DM "> "
 .e2:
 	; 's s0 < IF
-	DW tick_s
-	DW s_zero
-	DW less_than
-	DW if_raw
+	DX tick_s
+	DX s_zero
+	DX less_than
+	DX if_raw
 	DB .then-$-1
 		; \ Print contents of stack
 		; 's  s0 2 -  DO
-		DW tick_s
-		DW s_zero
-		DW raw_char
+		DX tick_s
+		DX s_zero
+		DX raw_char
 		DB 2
-		DW minus
-		DW do_raw
+		DX minus
+		DX do_raw
 		DB .loop-$-1
 .do:
 			; i @ .
-			DW r_fetch
-			DW fetch
-			DW dot
+			DX r_fetch
+			DX fetch
+			DX dot
 		; -2 +LOOP
-		DW literal_raw
+		DX literal_raw
 		DW -2
-		DW plus_loop_raw
+		DX plus_loop_raw
 		DB .do-$+256
 .loop:
 	; THEN ;
 .then:
-	DW exit
+	DX exit
 
 
 	; \ Print current state of return stack
@@ -4288,59 +4456,59 @@ dot_rs:
 	CALL colon_code
 	; \ Print size of stack in brackets
 	; 'r r0 swap - 2/ 1-
-	DW tick_r
-	DW r_zero
-	DW swap
-	DW minus
-	DW two_slash
-	DW one_minus
+	DX tick_r
+	DX r_zero
+	DX swap
+	DX minus
+	DX two_slash
+	DX one_minus
 	; ." <"
-	DW dot_quote_raw
+	DX dot_quote_raw
 	DB .s1e-.s1
 .s1:
 	DM "<"
 .s1e:
 	; 0 .R
-	DW zero_literal
-	DW dot_r
+	DX zero_literal
+	DX dot_r
 	; ." > "
-	DW dot_quote_raw
+	DX dot_quote_raw
 	DB .s2e-.s2
 .s2:
 	DM "> "
 .s2e:
 	; 'r cell+ r0 < INVERT IF EXIT THEN
-	DW tick_r
-	DW cell_plus
-	DW r_zero
-	DW less_than
-	DW invert
-	DW if_raw
+	DX tick_r
+	DX cell_plus
+	DX r_zero
+	DX less_than
+	DX invert
+	DX if_raw
 	DB .then-$-1
-	DW exit
+	DX exit
 .then:
 	; \ Print contents of stack
 	; 'r cell+ r0 2 -  DO
-	DW tick_r
-	DW cell_plus
-	DW r_zero
-	DW raw_char
+	DX tick_r
+	DX cell_plus
+	DX r_zero
+	DX raw_char
 	DB 2
-	DW minus
-	DW do_raw
+	DX minus
+	DX do_raw
 	DB .loop-$-1
 .do:
 		; i @ u.
-		DW r_fetch
-		DW fetch
-		DW u_dot
+		DX r_fetch
+		DX fetch
+		DX u_dot
 	; -2 +LOOP ;
-	DW literal_raw
+	DX literal_raw
 	DW -2
-	DW plus_loop_raw
+	DX plus_loop_raw
 	DB .do-$+256
 .loop:
-	DW exit
+	DX exit
 
 
 	; \ Print immediate string
@@ -4349,11 +4517,11 @@ dot_rs:
 	HEADER dot_paren, ".(", 1
 dot_paren:
 	CALL colon_code
-	DW raw_char
+	DX raw_char
 	DB ')'
-	DW parse
-	DW type
-	DW exit
+	DX parse
+	DX type
+	DX exit
 
 
 	; \ Inline comment
@@ -4362,11 +4530,11 @@ dot_paren:
 	HEADER paren, "(", 1
 paren:
 	CALL colon_code
-	DW raw_char
+	DX raw_char
 	DB ')'
-	DW parse
-	DW two_drop
-	DW exit
+	DX parse
+	DX two_drop
+	DX exit
 
 
 	; \ Line comment
@@ -4375,11 +4543,11 @@ paren:
 	HEADER backslash, "\\", 1
 backslash:
 	CALL colon_code
-	DW in_size
-	DW fetch
-	DW to_in
-	DW store
-	DW exit
+	DX in_size
+	DX fetch
+	DX to_in
+	DX store
+	DX exit
 
 
 	; \ Compile a Z80 CALL instruction
@@ -4388,11 +4556,11 @@ backslash:
 	HEADER _call, "CALL", 0
 _call:
 	CALL colon_code
-	DW raw_char
+	DX raw_char
 	DB 0xCD
-	DW c_comma
-	DW comma
-	DW exit
+	DX c_comma
+	DX comma
+	DX exit
 
 
 	; \ Compile string as counted string
@@ -4403,23 +4571,23 @@ cstr_comma:
 	CALL colon_code
 	; \ Store length
 	; DUP C,
-	DW dup
-	DW c_comma
+	DX dup
+	DX c_comma
 	; \ Store string
 	; OVER + SWAP ?DO I C@ C, LOOP ;
-	DW over
-	DW plus
-	DW swap
-	DW question_do_raw
+	DX over
+	DX plus
+	DX swap
+	DX question_do_raw
 	DB .loop-$-1
 .do:
-	DW r_fetch
-	DW c_fetch
-	DW c_comma
-	DW loop_raw
+	DX r_fetch
+	DX c_fetch
+	DX c_comma
+	DX loop_raw
 	DB .do-$+256
 .loop:
-	DW exit
+	DX exit
 
 
 	; \ Create new symbol from parsed name
@@ -4429,37 +4597,37 @@ sym_comma:
 	CALL colon_code
 	; \ Write back-link
 	; SYM-LAST @ ,
-	DW sym_last
-	DW fetch
-	DW comma
+	DX sym_last
+	DX fetch
+	DX comma
 	; \ Parse the name
 	; PARSE-NAME
-	DW parse_name
+	DX parse_name
 	; ( str-addr str-u)
 	; \ Must be non-empty
 	; DUP 0= ABORT" missing name"
-	DW dup
-	DW zero_equals
-	DW abort_quote_raw
+	DX dup
+	DX zero_equals
+	DX abort_quote_raw
 	DB .e1-.s1
 .s1:
 	DM "missing name"
 .e1:
 	; \ Must be smaller than 64 chars
 	; DUP 64 >= ABORT" long name"
-	DW dup
-	DW raw_char
+	DX dup
+	DX raw_char
 	DB 64
-	DW greater_than_or_equal
-	DW abort_quote_raw
+	DX greater_than_or_equal
+	DX abort_quote_raw
 	DB .e2-.s2
 .s2:
 	DM "long name"
 .e2:
 	; \ Compile counted string
 	; CSTR, ;
-	DW cstr_comma
-	DW exit
+	DX cstr_comma
+	DX exit
 
 
 	; \ Create new definition, and make it findable
@@ -4471,32 +4639,32 @@ create:
 	CALL colon_code
 	; \ Retain address of new symbol
 	; HERE
-	DW here
+	DX here
 	; ( addr " name")
 	; \ Create new symbol with parsed name
 	; SYM,
-	DW sym_comma
+	DX sym_comma
 	; ( addr)
 	; \ Write 'CALL create-code' instruction
 	; ??? CALL
-	DW literal_raw
+	DX literal_raw
 	DW create_code
-	DW _call
+	DX _call
 	; \ Make symbol findable
 	; SYM-LAST ! ; DECIMAL
-	DW sym_last
-	DW store
-	DW exit
+	DX sym_last
+	DX store
+	DX exit
 
 
 	; : VARIABLE CREATE CELL ALLOT ;
 	HEADER variable, "VARIABLE", 0
 variable:
 	CALL colon_code
-	DW create
-	DW cell
-	DW allot
-	DW exit
+	DX create
+	DX cell
+	DX allot
+	DX exit
 
 
 	; \ Switch to compilation mode
@@ -4505,10 +4673,10 @@ variable:
 	HEADER right_bracket, "]", 0
 right_bracket:
 	CALL colon_code
-	DW true
-	DW state
-	DW store
-	DW exit
+	DX true
+	DX state
+	DX store
+	DX exit
 
 
 	; \ Switch to interpreter mode immediately
@@ -4517,10 +4685,10 @@ right_bracket:
 	HEADER left_bracket, "[", 1
 left_bracket:
 	CALL colon_code
-	DW false
-	DW state
-	DW store
-	DW exit
+	DX false
+	DX state
+	DX store
+	DX exit
 
 
 	; \ Use to remember stack depth before/after colon def
@@ -4547,31 +4715,31 @@ colon:
 	CALL colon_code
 	; \ Retain address of symbol
 	; HERE
-	DW here
+	DX here
 	; \ Remember stack depth
 	; DEPTH :DEPTH !
-	DW depth
-	DW colon_depth
-	DW store
+	DX depth
+	DX colon_depth
+	DX store
 	; ( colon-sys " name")
 	; \ Write symbol header
 	; SYM,
-	DW sym_comma
+	DX sym_comma
 	; ( colon-sys)
 	; \ Remember code address
 	; HERE :START !
-	DW here
-	DW colon_start
-	DW store
+	DX here
+	DX colon_start
+	DX store
 	; \ Write CALL colon-code
 	; ??? CALL
-	DW literal_raw
+	DX literal_raw
 	DW colon_code
-	DW _call
+	DX _call
 	; \ Start compiling
 	; ] ;
-	DW right_bracket
-	DW exit
+	DX right_bracket
+	DX exit
 
 
 	; \ End : or DOES> definition
@@ -4582,27 +4750,27 @@ semicolon:
 	CALL colon_code
 	; \ Current code exits if not already
 	; POSTPONE EXIT
-	DW postpone_raw
+	DX postpone_raw
 	DW exit
 	; \ Check stack depth
 	; DEPTH :DEPTH @ <> ABORT" unbalanced"
-	DW depth
-	DW colon_depth
-	DW fetch
-	DW not_equals
-	DW abort_quote_raw
+	DX depth
+	DX colon_depth
+	DX fetch
+	DX not_equals
+	DX abort_quote_raw
 	DB .e1-.s1
 .s1:
 	DM "unbalanced"
 .e1:
 	; \ Make definition findable
 	; SYM-LAST !
-	DW sym_last
-	DW store
+	DX sym_last
+	DX store
 	; \ Return to interpreter mode
 	; POSTPONE [ ; IMMEDIATE
-	DW left_bracket
-	DW exit
+	DX left_bracket
+	DX exit
 
 
 	; ( -- orig)
@@ -4611,15 +4779,15 @@ semicolon:
 _if:
 	CALL colon_code
 	; POSTPONE (IF)
-	DW postpone_raw
+	DX postpone_raw
 	DW if_raw
 	; HERE
-	DW here
+	DX here
 	; ( orig)
 	; 1 ALLOT ; IMMEDIATE
-	DW one_literal
-	DW allot
-	DW exit
+	DX one_literal
+	DX allot
+	DX exit
 
 
 	; ( orig --)
@@ -4629,17 +4797,17 @@ then:
 	CALL colon_code
 	; DUP 1+
 	; ( orig orig+1)
-	DW dup
-	DW one_plus
+	DX dup
+	DX one_plus
 	; HERE SWAP -
-	DW here
-	DW swap
-	DW minus
+	DX here
+	DX swap
+	DX minus
 	; ( orig jump-len)
 	; SWAP C! ; IMMEDAITE
-	DW swap
-	DW c_store
-	DW exit
+	DX swap
+	DX c_store
+	DX exit
 
 
 	; : ELSE
@@ -4647,19 +4815,19 @@ then:
 _else:
 	CALL colon_code
 	; POSTPONE (ELSE)
-	DW postpone_raw
+	DX postpone_raw
 	DW else_skip
 	; HERE
-	DW here
+	DX here
 	; ( orig)
 	; 1 ALLOT
-	DW one_literal
-	DW allot
+	DX one_literal
+	DX allot
 	; SWAP POSTPONE THEN
-	DW swap
-	DW then
+	DX swap
+	DX then
 	; ; IMMEDIATE
-	DW exit
+	DX exit
 
 
 	; ( -- dest)
@@ -4674,12 +4842,12 @@ begin:
 	HEADER again, "AGAIN", 1
 again:
 	CALL colon_code
-	DW postpone_raw
+	DX postpone_raw
 	DW again_raw
-	DW here
-	DW minus
-	DW c_comma
-	DW exit
+	DX here
+	DX minus
+	DX c_comma
+	DX exit
 
 
 	; ( dest --)
@@ -4687,12 +4855,12 @@ again:
 	HEADER until, "UNTIL", 1
 until:
 	CALL colon_code
-	DW postpone_raw
+	DX postpone_raw
 	DW until_raw
-	DW here
-	DW minus
-	DW c_comma
-	DW exit
+	DX here
+	DX minus
+	DX c_comma
+	DX exit
 
 
 	; ( dest -- orig dest)
@@ -4700,9 +4868,9 @@ until:
 	HEADER while, "WHILE", 1
 while:
 	CALL colon_code
-	DW _if
-	DW swap
-	DW exit
+	DX _if
+	DX swap
+	DX exit
 
 
 	; ( orig dest --)
@@ -4710,9 +4878,9 @@ while:
 	HEADER repeat, "REPEAT", 1
 repeat:
 	CALL colon_code
-	DW again
-	DW then
-	DW exit
+	DX again
+	DX then
+	DX exit
 
 
 	; ( -- dest)
@@ -4720,12 +4888,12 @@ repeat:
 	HEADER do, "DO", 1
 do:
 	CALL colon_code
-	DW postpone_raw
+	DX postpone_raw
 	DW do_raw
-	DW one_literal
-	DW allot
-	DW here
-	DW exit
+	DX one_literal
+	DX allot
+	DX here
+	DX exit
 
 
 	; ( -- dest)
@@ -4733,12 +4901,12 @@ do:
 	HEADER question_do, "?DO", 1
 question_do:
 	CALL colon_code
-	DW postpone_raw
+	DX postpone_raw
 	DW question_do_raw
-	DW one_literal
-	DW allot
-	DW here
-	DW exit
+	DX one_literal
+	DX allot
+	DX here
+	DX exit
 
 
 	; ( do-sys --)
@@ -4747,24 +4915,24 @@ question_do:
 loop:
 	CALL colon_code
 	; POSTPONE (LOOP)
-	DW postpone_raw
+	DX postpone_raw
 	DW loop_raw
 	; DUP HERE - C,
-	DW dup
-	DW here
-	DW minus
-	DW c_comma
+	DX dup
+	DX here
+	DX minus
+	DX c_comma
 	; DUP 1- SWAP HERE SWAP - SWAP C!
-	DW dup
-	DW one_minus
-	DW swap
-	DW here
-	DW swap
-	DW minus
-	DW swap
-	DW c_store
+	DX dup
+	DX one_minus
+	DX swap
+	DX here
+	DX swap
+	DX minus
+	DX swap
+	DX c_store
 	; ; IMMEDIATE
-	DW exit
+	DX exit
 
 
 	; ( do-sys --)
@@ -4773,28 +4941,28 @@ loop:
 plus_loop:
 	CALL colon_code
 	; HERE -ROT
-	DW here
-	DW minus_rot
+	DX here
+	DX minus_rot
 	; ( addr do-sys)
 	; POSTPONE LOOP
-	DW loop
+	DX loop
 	; ( addr)
 	; ['] (+LOOP) SWAP !
-	DW literal_raw
+	DX literal_raw
 	DW plus_loop_raw
-	DW swap
-	DW store
+	DX swap
+	DX store
 	; ; IMMEDIATE
-	DW exit
+	DX exit
 
 
 	; : I POSTPONE R@ ; IMMEDIATE
 	HEADER _i, "I", 1
 _i:
 	CALL colon_code
-	DW postpone_raw
+	DX postpone_raw
 	DW r_fetch
-	DW exit
+	DX exit
 
 
 	; \ Interpret input buffer until empty
@@ -4804,71 +4972,71 @@ interpret:
 	CALL colon_code
 	; BEGIN BL WORD DUP C@ WHILE
 .begin:
-	DW bl
-	DW word
-	DW dup
-	DW c_fetch
-	DW if_raw
+	DX bl
+	DX word
+	DX dup
+	DX c_fetch
+	DX if_raw
 	DB .repeat-$-1
 		; FIND
-		DW find
+		DX find
 		; ?DUP 0= IF
-		DW question_dup
-		DW zero_equals
-		DW if_raw
+		DX question_dup
+		DX zero_equals
+		DX if_raw
 		DB .else-$-1
 			; NUMBER  STATE @  IF
-			DW number
-			DW state
-			DW fetch
-			DW if_raw
+			DX number
+			DX state
+			DX fetch
+			DX if_raw
 			DB .else2-$-1
 				; IF
-				DW if_raw
+				DX if_raw
 				DB .else4-$-1
 					; POSTPONE 2LITERAL
-					DW two_literal
+					DX two_literal
 				; ELSE
-				DW else_skip
+				DX else_skip
 				DB .then4-$-1
 .else4:
 					; POSTPONE LITERAL
-					DW literal
+					DX literal
 				; THEN
 .then4:
 			; ELSE
-			DW else_skip
+			DX else_skip
 			DB .then2-$-1
 .else2:
 				; DROP
-				DW drop
+				DX drop
 			; THEN
 .then2:
 		; ELSE
-		DW else_skip
+		DX else_skip
 		DB .then-$-1
 .else:
 			; 0<  STATE @  AND  IF COMPILE, ELSE EXECUTE THEN
-			DW zero_less
-			DW state
-			DW fetch
-			DW and
-			DW if_raw
+			DX zero_less
+			DX state
+			DX fetch
+			DX and
+			DX if_raw
 			DB .else3-$-1
-			DW compile_comma
-			DW else_skip
+			DX compile_comma
+			DX else_skip
 			DB .then3-$-1
 .else3:
-			DW execute
+			DX execute
 .then3:
 		; THEN
 .then:
 	; REPEAT DROP ;
-	DW again_raw
+	DX again_raw
 	DB .begin-$+256
 .repeat:
-	DW drop
-	DW exit
+	DX drop
+	DX exit
 
 
 	; : QUIT ( -- ) \ Reset return stack then start interpretation
@@ -4876,32 +5044,32 @@ interpret:
 quit:
 	CALL colon_code
 	; R0 RP! CR
-	DW r_zero
-	DW rp_store
-	DW cr
+	DX r_zero
+	DX rp_store
+	DX cr
 	; POSTPONE [
-	DW left_bracket
+	DX left_bracket
 	; BEGIN
 .begin:
 		; -READ  0 >IN !  IN# !  'IN !  SPACE INTERPRET ." ok" CR
-		DW line_read
-		DW zero_literal
-		DW to_in
-		DW store
-		DW in_size
-		DW store
-		DW tick_in
-		DW store
-		DW space
-		DW interpret
-		DW dot_quote_raw
+		DX line_read
+		DX zero_literal
+		DX to_in
+		DX store
+		DX in_size
+		DX store
+		DX tick_in
+		DX store
+		DX space
+		DX interpret
+		DX dot_quote_raw
 		DB .s1e-.s1
 .s1:
 		DM "ok"
 .s1e:
-		DW cr
-	; AGAIN ; -2 ALLOT
-	DW again_raw
+		DX cr
+	; AGAIN ; -? ALLOT
+	DX again_raw
 	DB .begin-$+256
 
 
@@ -4911,39 +5079,39 @@ evaluate:
 	CALL colon_code
 	; \ Update input state to new addr, u, and save old state
 	; 0 >IN DUP @ >R !
-	DW zero_literal
-	DW to_in
-	DW dup
-	DW fetch
-	DW to_r
-	DW store
+	DX zero_literal
+	DX to_in
+	DX dup
+	DX fetch
+	DX to_r
+	DX store
 	; IN# DUP @ >R !
-	DW in_size
-	DW dup
-	DW fetch
-	DW to_r
-	DW store
+	DX in_size
+	DX dup
+	DX fetch
+	DX to_r
+	DX store
 	; 'IN DUP @ >R !
-	DW tick_in
-	DW dup
-	DW fetch
-	DW to_r
-	DW store
+	DX tick_in
+	DX dup
+	DX fetch
+	DX to_r
+	DX store
 	; \ Interpret code
 	; INTERPRET
-	DW interpret
+	DX interpret
 	; \ Restore input state
 	; R> 'IN !  R> IN# !  R> >IN ! ;
-	DW r_from
-	DW tick_in
-	DW store
-	DW r_from
-	DW in_size
-	DW store
-	DW r_from
-	DW to_in
-	DW store
-	DW exit
+	DX r_from
+	DX tick_in
+	DX store
+	DX r_from
+	DX in_size
+	DX store
+	DX r_from
+	DX to_in
+	DX store
+	DX exit
 
 
 	; ( "...<quote>"--)
@@ -4952,16 +5120,16 @@ evaluate:
 dot_quote:
 	CALL colon_code
 	; POSTPONE (.")
-	DW postpone_raw
+	DX postpone_raw
 	DW dot_quote_raw
 	; [CHAR] " PARSE
-	DW raw_char
+	DX raw_char
 	DB '"'
-	DW parse
+	DX parse
 	; ( addr u)
 	; CSTR, ;
-	DW cstr_comma
-	DW exit
+	DX cstr_comma
+	DX exit
 
 
 	; ( "...<quote>"--)
@@ -4970,16 +5138,16 @@ dot_quote:
 s_quote:
 	CALL colon_code
 	; POSTPONE (S")
-	DW postpone_raw
+	DX postpone_raw
 	DW s_quote_raw
 	; [CHAR] " PARSE
-	DW raw_char
+	DX raw_char
 	DB '"'
-	DW parse
+	DX parse
 	; ( addr u)
 	; CSTR, ;
-	DW cstr_comma
-	DW exit
+	DX cstr_comma
+	DX exit
 
 
 	; ( "<spaces>name" -- xt)
@@ -4988,25 +5156,25 @@ s_quote:
 tick:
 	CALL colon_code
 	; PARSE-NAME
-	DW parse_name
+	DX parse_name
 	; ( addr u)
 	; SFIND
-	DW sfind
+	DX sfind
 	; ( addr u 0 | xt 1 | xt -1)
 	; ?DUP 0= IF
-	DW question_dup
-	DW zero_equals
-	DW if_raw
+	DX question_dup
+	DX zero_equals
+	DX if_raw
 	DB .then-$-1
 		; ( addr u)
 		; WHAT?
-		DW what_question
+		DX what_question
 	; THEN
 .then:
 	; ( xt 1 | xt -1)
 	; DROP ;
-	DW drop
-	DW exit
+	DX drop
+	DX exit
 
 
 	; ( "<spaces>name" --)
@@ -5015,9 +5183,9 @@ tick:
 	HEADER bracket_tick, "[']", 1
 bracket_tick:
 	CALL colon_code
-	DW tick
-	DW literal
-	DW exit
+	DX tick
+	DX literal
+	DX exit
 
 
 	; ( d -- d)
@@ -5026,18 +5194,18 @@ bracket_tick:
 dabs:
 	CALL colon_code
 	; DUP 0< IF
-	DW dup
-	DW zero_less
-	DW if_raw
+	DX dup
+	DX zero_less
+	DX if_raw
 	DB .then-$-1
 		; 0. 2SWAP D-
-		DW zero_literal
-		DW zero_literal
-		DW two_swap
-		DW d_minus
+		DX zero_literal
+		DX zero_literal
+		DX two_swap
+		DX d_minus
 	; THEN ;
 .then:
-	DW exit
+	DX exit
 
 
 	; ( d n -- rem quo)
@@ -5047,41 +5215,41 @@ sm_slash_rem:
 	CALL colon_code
 	; \ retain signs
 	; 2DUP 2>R
-	DW two_dup
-	DW two_to_r
+	DX two_dup
+	DX two_to_r
 	; ( R: d-high n)
 	; \ absolute values
 	; -ROT DABS ROT ABS
-	DW minus_rot
-	DW dabs
-	DW rot
-	DW _abs
+	DX minus_rot
+	DX dabs
+	DX rot
+	DX _abs
 	; \ perform unsigned div
 	; UM/MOD SWAP
-	DW um_slash_mod
-	DW swap
+	DX um_slash_mod
+	DX swap
 	; ( uquo urem)
 	; \ remainder has sign of d
 	; I' 0< IF NEGATE THEN
-	DW i_tick
-	DW zero_less
-	DW if_raw
+	DX i_tick
+	DX zero_less
+	DX if_raw
 	DB .then1-$-1
-	DW negate
+	DX negate
 .then1:
 	; SWAP
-	DW swap
+	DX swap
 	; ( urem uquo)
 	; \ quo sign is sign1*sign2
 	; 2R> XOR 0< IF NEGATE THEN ;
-	DW two_r_from
-	DW xor
-	DW zero_less
-	DW if_raw
+	DX two_r_from
+	DX xor
+	DX zero_less
+	DX if_raw
 	DB .then2-$-1
-	DW negate
+	DX negate
 .then2:
-	DW exit
+	DX exit
 
 
 	; ( x m d -- r q)
@@ -5089,11 +5257,11 @@ sm_slash_rem:
 	HEADER star_slash_mod, "*/MOD", 0
 star_slash_mod:
 	CALL colon_code
-	DW minus_rot
-	DW m_star
-	DW rot
-	DW sm_slash_rem
-	DW exit
+	DX minus_rot
+	DX m_star
+	DX rot
+	DX sm_slash_rem
+	DX exit
 
 
 	; ( x m d -- q)
@@ -5101,9 +5269,9 @@ star_slash_mod:
 	HEADER star_slash, "*/", 0
 star_slash:
 	CALL colon_code
-	DW star_slash_mod
-	DW nip
-	DW exit
+	DX star_slash_mod
+	DX nip
+	DX exit
 
 
 	; ( n1 n2 -- d)
@@ -5112,30 +5280,30 @@ star_slash:
 m_star:
 	CALL colon_code
 	; 2DUP
-	DW two_dup
+	DX two_dup
 	; ( n1 n2 n1 n2)
 	; XOR 0< -ROT
-	DW xor
-	DW zero_less
-	DW minus_rot
+	DX xor
+	DX zero_less
+	DX minus_rot
 	; ( sign n1 n2)
 	; SWAP ABS SWAP ABS
-	DW swap
-	DW _abs
-	DW swap
-	DW _abs
+	DX swap
+	DX _abs
+	DX swap
+	DX _abs
 	; ( sign an1 an2)
 	; UM*
-	DW um_star
+	DX um_star
 	; ( sign ad)
 	; ROT IF DNEGATE THEN
-	DW rot
-	DW if_raw
+	DX rot
+	DX if_raw
 	DB .then-$-1
-	DW dnegate
+	DX dnegate
 .then:
 	; ;
-	DW exit
+	DX exit
 
 
 	; ( d n1 n2 -- d)
@@ -5145,36 +5313,36 @@ m_star_slash:
 	CALL colon_code
 	; ( dl dh n1 n2)
 	; -ROT 2DUP
-	DW minus_rot
-	DW two_dup
+	DX minus_rot
+	DX two_dup
 	; ( dl n2 dh n1 dh n1)
 	; XOR 0<
-	DW xor
-	DW zero_less
+	DX xor
+	DX zero_less
 	; ( dl n2 dh n1 sign)
 	; >R
-	DW to_r
+	DX to_r
 	; ( dl n2 dh n1) ( R:sign)
 	; ABS ROT
-	DW _abs
-	DW rot
+	DX _abs
+	DX rot
 	; ( dl dh an1 n2)
 	; 2SWAP DABS 2SWAP
-	DW two_swap
-	DW dabs
-	DW two_swap
+	DX two_swap
+	DX dabs
+	DX two_swap
 	; ( ad an1 n2)
 	; UM*/
-	DW um_star_slash
+	DX um_star_slash
 	; ( ad2)
 	; R> IF DNEGATE THEN
-	DW r_from
-	DW if_raw
+	DX r_from
+	DX if_raw
 	DB .then-$-1
-	DW dnegate
+	DX dnegate
 .then:
 	; ;
-	DW exit
+	DX exit
 
 
 	; ( num den -- rem quo)
@@ -5183,37 +5351,37 @@ m_star_slash:
 slash_mod:
 	CALL colon_code
 	; 2DUP 2>R
-	DW two_dup
-	DW two_to_r
+	DX two_dup
+	DX two_to_r
 	; ( n d) ( R: n d)
 	; SWAP ABS SWAP ABS
-	DW swap
-	DW _abs
-	DW swap
-	DW _abs
+	DX swap
+	DX _abs
+	DX swap
+	DX _abs
 	; ( un ud)
 	; U/MOD
-	DW u_slash_mod
+	DX u_slash_mod
 	; ( ur uq)
 	; SWAP I' 0< IF NEGATE THEN
-	DW swap
-	DW i_tick
-	DW zero_less
-	DW if_raw
+	DX swap
+	DX i_tick
+	DX zero_less
+	DX if_raw
 	DB .then-$-1
-	DW negate
+	DX negate
 .then:
 	; ( uq r)
 	; SWAP 2R> XOR 0< IF NEGATE THEN ;
-	DW swap
-	DW two_r_from
-	DW xor
-	DW zero_less
-	DW if_raw
+	DX swap
+	DX two_r_from
+	DX xor
+	DX zero_less
+	DX if_raw
 	DB .then2-$-1
-	DW negate
+	DX negate
 .then2:
-	DW exit
+	DX exit
 
 
 	; ( num den -- quo)
@@ -5222,9 +5390,9 @@ slash_mod:
 slash:
 	CALL colon_code
 	; /MOD NIP ;
-	DW slash_mod
-	DW nip
-	DW exit
+	DX slash_mod
+	DX nip
+	DX exit
 
 
 	; ( num den -- rem)
@@ -5233,9 +5401,9 @@ slash:
 _mod:
 	CALL colon_code
 	; /MOD DROP ;
-	DW slash_mod
-	DW drop
-	DW exit
+	DX slash_mod
+	DX drop
+	DX exit
 
 
 	; ( xt -- data-addr)
@@ -5244,10 +5412,10 @@ _mod:
 to_body:
 	CALL colon_code
 	; 3 + ;
-	DW raw_char
+	DX raw_char
 	DB 3
-	DW plus
-	DW exit
+	DX plus
+	DX exit
 
 
 	; ( "message<quote>" --)
@@ -5257,14 +5425,14 @@ to_body:
 abort_quote:
 	CALL colon_code
 	; POSTPONE (ABORT")
-	DW postpone_raw
+	DX postpone_raw
 	DW abort_quote_raw
 	; [CHAR] " PARSE CSTR, ;
-	DW raw_char
+	DX raw_char
 	DB '"'
-	DW parse
-	DW cstr_comma
-	DW exit
+	DX parse
+	DX cstr_comma
+	DX exit
 
 
 	; ( "name " -- c)
@@ -5273,20 +5441,20 @@ abort_quote:
 char:
 	CALL colon_code
 	; PARSE-NAME
-	DW parse_name
+	DX parse_name
 	; ( addr u)
 	; DUP 0= ABORT" expect char"
-	DW dup
-	DW zero_equals
-	DW abort_quote_raw
+	DX dup
+	DX zero_equals
+	DX abort_quote_raw
 	DB .e1-.s1
 .s1:
 	DM "expect char"
 .e1:
 	; DROP C@ ;
-	DW drop
-	DW c_fetch
-	DW exit
+	DX drop
+	DX c_fetch
+	DX exit
 
 
 	; ( "name " --)
@@ -5296,14 +5464,14 @@ char:
 bracket_char:
 	CALL colon_code
 	; CHAR
-	DW char
+	DX char
 	; ( c)
 	; POSTPONE (CHAR)
-	DW postpone_raw
+	DX postpone_raw
 	DW raw_char
 	; C, ;
-	DW c_comma
-	DW exit
+	DX c_comma
+	DX exit
 
 
 	; \ Make last defined symbol call/jump to xt instead
@@ -5313,13 +5481,13 @@ bracket_char:
 instead:
 	CALL colon_code
 	; SYM-LAST @ >SYM + 1+ ! ;
-	DW sym_last
-	DW fetch
-	DW to_sym
-	DW plus
-	DW one_plus
-	DW store
-	DW exit
+	DX sym_last
+	DX fetch
+	DX to_sym
+	DX plus
+	DX one_plus
+	DX store
+	DX exit
 
 
 	; ( x "name " --)
@@ -5328,13 +5496,13 @@ instead:
 constant:
 	CALL colon_code
 	; CREATE ,
-	DW create
-	DW comma
+	DX create
+	DX comma
 	; ??? INSTEAD ;
-	DW literal_raw
+	DX literal_raw
 	DW constant_code
-	DW instead
-	DW exit
+	DX instead
+	DX exit
 
 
 	; : (DOES)
@@ -5342,9 +5510,9 @@ constant:
 does_raw:
 	CALL colon_code
 	; R> INSTEAD ;
-	DW r_from
-	DW instead
-	DW exit
+	DX r_from
+	DX instead
+	DX exit
 
 
 	; : DOES>
@@ -5352,13 +5520,13 @@ does_raw:
 does:
 	CALL colon_code
 	; POSTPONE (DOES)
-	DW postpone_raw
+	DX postpone_raw
 	DW does_raw
 	; ??? CALL ;
-	DW literal_raw
+	DX literal_raw
 	DW does_code
-	DW _call
-	DW exit
+	DX _call
+	DX exit
 
 
 	; : FM/MOD
@@ -5366,43 +5534,43 @@ does:
 fm_slash_mod:
 	CALL colon_code
 	; SM/REM
-	DW sm_slash_rem
+	DX sm_slash_rem
 	; ( rem quo)
 	; OVER IF DUP 0< IF
-	DW over
-	DW if_raw
+	DX over
+	DX if_raw
 	DB .then-$-1
-	DW dup
-	DW zero_less
-	DW if_raw
+	DX dup
+	DX zero_less
+	DX if_raw
 	DB .then-$-1
 		; SWAP
-		DW swap
+		DX swap
 		; ( quo rem)
 		; DUP 0< IF
-		DW dup
-		DW zero_less
-		DW if_raw
+		DX dup
+		DX zero_less
+		DX if_raw
 		DB .else2-$-1
 			; 1- NEGATE
-			DW one_minus
-			DW negate
+			DX one_minus
+			DX negate
 		; ELSE
-		DW else_skip
+		DX else_skip
 		DB .then2-$-1
 .else2:
 			; NEGATE 1-
-			DW negate
-			DW one_minus
+			DX negate
+			DX one_minus
 		; THEN
 .then2:
 		; SWAP 1-
-		DW swap
-		DW one_minus
+		DX swap
+		DX one_minus
 		; ( rem quo)
 	; THEN THEN ;
 .then:
-	DW exit
+	DX exit
 
 
 	; HEX : IMMEDIATE
@@ -5410,21 +5578,21 @@ fm_slash_mod:
 immediate:
 	CALL colon_code
 	; SYM-LAST @ CELL+
-	DW sym_last
-	DW fetch
-	DW cell_plus
+	DX sym_last
+	DX fetch
+	DX cell_plus
 	; ( addr)
 	; DUP C@ 80 OR SWAP C!
-	DW dup
-	DW c_fetch
-	DW raw_char
+	DX dup
+	DX c_fetch
+	DX raw_char
 	DB 0x80
-	DW or
-	DW swap
-	DW c_store
+	DX or
+	DX swap
+	DX c_store
 	; ( )
 	; ; DECIMAL
-	DW exit
+	DX exit
 
 
 	; \ Compile literal xt
@@ -5433,19 +5601,19 @@ immediate:
 postpone_raw:
 	CALL colon_code
 	; R>
-	DW r_from
+	DX r_from
 	; ( addr)
 	; DUP @
-	DW dup
-	DW fetch
+	DX dup
+	DX fetch
 	; ( addr xt)
 	; COMPILE,
-	DW compile_comma
+	DX compile_comma
 	; ( addr)
 	; CELL+ >R ;
-	DW cell_plus
-	DW to_r
-	DW exit
+	DX cell_plus
+	DX to_r
+	DX exit
 
 
 	; \ Compile compilation semantics of name
@@ -5455,39 +5623,39 @@ postpone_raw:
 postpone:
 	CALL colon_code
 	; PARSE-NAME SFIND
-	DW parse_name
-	DW sfind
+	DX parse_name
+	DX sfind
 	; ( addr u 0 | xt 1 | xt -1)
 	; ?DUP 0= IF WHAT? THEN
-	DW question_dup
-	DW zero_equals
-	DW if_raw
+	DX question_dup
+	DX zero_equals
+	DX if_raw
 	DB .then-$-1
-	DW what_question
+	DX what_question
 .then:
 	; ( imm-xt 1 | xt -1)
 	; 0< IF
-	DW zero_less
-	DW if_raw
+	DX zero_less
+	DX if_raw
 	DB .else2-$-1
 		; ( xt)
 		; POSTPONE (PP)
-		DW postpone_raw
+		DX postpone_raw
 		DW postpone_raw
 		; ,
-		DW comma
+		DX comma
 		; ( )
 	; ELSE
-	DW else_skip
+	DX else_skip
 	DB .then2-$-1
 .else2:
 		; ( imm-xt)
 		; COMPILE,
-		DW compile_comma
+		DX compile_comma
 		; ( )
 	; THEN ; IMMEDIATE
 .then2:
-	DW exit
+	DX exit
 
 
 	; : RECURSE
@@ -5495,11 +5663,11 @@ postpone:
 recurse:
 	CALL colon_code
 	; :START @ COMPILE,
-	DW colon_start
-	DW fetch
-	DW compile_comma
+	DX colon_start
+	DX fetch
+	DX compile_comma
 	; ; IMMEDIATE
-	DW exit
+	DX exit
 
 
 	; \ Remove u2 characters from string
@@ -5509,21 +5677,21 @@ recurse:
 slash_string:
 	CALL colon_code
 	; TUCK
-	DW tuck
+	DX tuck
 	; ( addr1 u2 u1 u2)
 	; -
-	DW minus
+	DX minus
 	; ( addr1 u2 u3)
 	; SWAP ROT
-	DW swap
-	DW rot
+	DX swap
+	DX rot
 	; ( u3 u2 addr1)
 	; +
-	DW plus
+	DX plus
 	; ( u3 addr2)
 	; SWAP ;
-	DW swap
-	DW exit
+	DX swap
+	DX exit
 
 
 repeat_wait_init: EQU 45  ; 0.9s
