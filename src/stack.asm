@@ -148,3 +148,16 @@ two_to_r:
 	LD (IX+3), D
 	POP HL
 	JP next
+
+
+	; ( x_u ... x_0 u | x_u ... x_0 x_u)
+	; CODE PICK
+	HEADER pick, "PICK", 0
+pick:
+	ADD HL, HL
+	ADD HL, SP
+	LD E, (HL)
+	INC HL
+	LD D, (HL)
+	EX DE, HL
+	JP next
