@@ -7,26 +7,22 @@
 ; Stack operation words
 
 
+	HEADER drop, "DROP", 0
+drop:
+	POP HL
+	JP next
+
+
+	HEADER two_drop, "2DROP", 0
+two_drop:
+	POP HL
+	POP HL
+	JP next
+
+
 	HEADER dup, "DUP", 0
 dup:
 	PUSH HL
-	JP next
-
-
-	HEADER two_dup, "2DUP", 0
-two_dup:
-	POP DE
-	PUSH DE
-	PUSH HL
-	PUSH DE
-	JP next
-
-
-	HEADER swap, "SWAP", 0
-swap:
-	POP DE
-	PUSH HL
-	EX DE, HL
 	JP next
 
 
@@ -39,6 +35,27 @@ two_swap:
 	PUSH HL
 	PUSH AF
 	EX DE, HL
+	JP next
+
+
+	; Token vector is included here as a space optimisation, it is page-aligned
+	INCLUDE "tokens.asm"
+
+
+	HEADER swap, "SWAP", 0
+swap:
+	POP DE
+	PUSH HL
+	EX DE, HL
+	JP next
+
+
+	HEADER two_dup, "2DUP", 0
+two_dup:
+	POP DE
+	PUSH DE
+	PUSH HL
+	PUSH DE
 	JP next
 
 

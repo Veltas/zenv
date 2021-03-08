@@ -253,149 +253,6 @@ create_code:
 dictionary_start:
 
 
-	HEADER exit, "EXIT", 0
-exit:
-	LD C, (IX+0)
-	LD B, (IX+1)
-	INC IX
-	INC IX
-	PUSH BC
-	POP IY
-	JP next
-
-
-	HEADER drop, "DROP", 0
-drop:
-	POP HL
-	JP next
-
-
-	HEADER two_drop, "2DROP", 0
-two_drop:
-	POP HL
-	POP HL
-	JP next
-
-
-	; Tokens vector
-	IF tokenised
-	ALIGN 0x100
-tokens:
-exit_tok:
-	DW exit
-dup_tok:
-	DW dup
-question_dup_tok:
-	DW question_dup
-less_than_tok:
-	DW less_than
-greater_than_tok:
-	DW greater_than
-drop_tok:
-	DW drop
-two_drop_tok:
-	DW two_drop
-swap_tok:
-	DW swap
-rot_tok:
-	DW rot
-over_tok:
-	DW over
-nip_tok:
-	DW nip
-tuck_tok:
-	DW tuck
-plus_tok:
-	DW plus
-one_plus_tok:
-	DW one_plus
-one_minus_tok:
-	DW one_minus
-minus_tok:
-	DW minus
-raw_char_tok:
-	DW raw_char
-literal_raw_tok:
-	DW literal_raw
-if_raw_tok:
-	DW if_raw
-else_skip_tok:
-	DW else_skip
-store_tok:
-	DW store
-c_store_tok:
-	DW c_store
-fetch_tok:
-	DW fetch
-c_fetch_tok:
-	DW c_fetch
-two_fetch_tok:
-	DW two_fetch
-two_swap_tok:
-	DW two_swap
-to_r_tok:
-	DW to_r
-r_from_tok:
-	DW r_from
-r_fetch_tok:
-	DW r_fetch
-zero_literal_tok:
-	DW zero_literal
-one_literal_tok:
-	DW one_literal
-true_tok:
-	DW true
-to_in_tok:
-	DW to_in
-postpone_raw_tok:
-	DW postpone_raw
-zero_equals_tok:
-	DW zero_equals
-equals_tok:
-	DW equals
-not_equals_tok:
-	DW not_equals
-until_raw_tok:
-	DW until_raw
-again_raw_tok:
-	DW again_raw
-do_raw_tok:
-	DW do_raw
-question_do_raw_tok:
-	DW question_do_raw
-loop_raw_tok:
-	DW loop_raw
-compile_comma_tok:
-	DW compile_comma
-negate_tok:
-	DW negate
-_abs_tok:
-	DW _abs
-and_tok:
-	DW and
-or_tok:
-	DW or
-xor_tok:
-	DW xor
-invert_tok:
-	DW invert
-tick_in_tok:
-	DW tick_in
-in_size_tok:
-	DW in_size
-dot_quote_raw_tok:
-	DW dot_quote_raw
-abort_quote_raw_tok:
-	DW abort_quote_raw
-t_col_tok:
-	DW t_col
-t_row_tok:
-	DW t_row
-within_tok:
-	DW within
-	ENDIF
-
-
 	INCLUDE "stack.asm"
 	INCLUDE "memory.asm"
 	INCLUDE "maths.asm"
@@ -1121,7 +978,7 @@ itone:
 
 
 	; \ -1 if s1<s2, 1 if s1>s2, 0 if s1=s2
-	; CODE COMPARE ( s1-addr s1-u s2-addr s2-u -- n )
+	; CODE COMPARE ( a1 u1 a2 u2 -- n )
 	HEADER compare, "COMPARE", 0
 compare:
 	LD C, L
@@ -1131,24 +988,24 @@ compare:
 	PUSH HL
 	OR A
 	SBC HL, BC
-	JR C, .s2_u_larger
-	JR Z, .s1_u_s2_u_equal
+	JR C, .u2_larger
+	JR Z, .u1_u2_equal
 	POP HL
 	LD C, L
 	LD B, H
 	LD A, 1
 	JR .cont
-.s1_u_s2_u_equal:
+.u1_u2_equal:
 	POP HL
 	LD A, 0
 	JR .cont
-.s2_u_larger:
+.u2_larger:
 	POP HL
 	LD A, -1
 .cont:
 	POP HL
 	PUSH AF
-	; HL = s1, DE = s2, BC = min(s1-u,s2-u)
+	; HL = a1, DE = a2, BC = min(u1,u2)
 	LD A, C
 	OR B
 	JR Z, .skip_loop
@@ -3069,7 +2926,7 @@ number:
 	DX count
 	; ( c-addr addr u)
 	; \ Fail on empty string
-	; ?DUP 0= IF DROP ABORT-TYPE THEN
+	; ?DUP 0= IF DROP CWHAT? THEN
 	DX question_dup
 	DX zero_equals
 	DX if_raw
@@ -3094,7 +2951,7 @@ number:
 	; THEN
 .then_ignore_minus:
 	; \ Fail on empty string
-	; ?DUP 0= IF DROP ABORT-TYPE THEN
+	; ?DUP 0= IF DROP CWHAT? THEN
 	DX question_dup
 	DX zero_equals
 	DX if_raw
@@ -3125,7 +2982,7 @@ number:
 			DX zero_equals
 			DX if_raw
 			DB .then_bad-$-1
-				; 2DROP 2DROP ABORT-TYPE
+				; 2DROP 2DROP CWHAT?
 				DX two_drop
 				DX two_drop
 				DX cwhat_question

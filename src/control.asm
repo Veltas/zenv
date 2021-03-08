@@ -7,6 +7,17 @@
 ; Control flow words
 
 
+	HEADER exit, "EXIT", 0
+exit:
+	LD C, (IX+0)
+	LD B, (IX+1)
+	INC IX
+	INC IX
+	PUSH BC
+	POP IY
+	JP next
+
+
 	HEADER leave, "LEAVE", 0
 leave:
 	LD E, (IX+4)
