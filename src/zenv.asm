@@ -258,6 +258,7 @@ dictionary_start:
 	INCLUDE "maths.asm"
 	INCLUDE "binary.asm"
 	INCLUDE "control.asm"
+	INCLUDE "tools.asm"
 
 
 	HEADER false, "FALSE", 0
