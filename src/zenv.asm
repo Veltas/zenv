@@ -3059,12 +3059,14 @@ number:
 	DX exit
 
 
+	if tokenised
 	; \ Start of tokens vector
 	; ??? TOKS CONSTANT
 	HEADER toks, "TOKS", 0
 toks:
 	CALL constant_code
 	DW tokens
+	endif
 
 
 	; ( xt -- )
