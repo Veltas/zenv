@@ -97,7 +97,7 @@ i_leave:
 
 
 	HEADER _j, "J", 0
-j:
+_j:
 	PUSH HL
 	LD L, (IX+6)
 	LD H, (IX+7)
