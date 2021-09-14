@@ -113,6 +113,7 @@ colon_code:
 	LD (IX+0), C
 	LD (IX+1), B
 	; Get new PC from stack
+pop_pc_next:
 	POP IY
 	; fall through
 
@@ -3643,8 +3644,7 @@ kscan:
 	LD (kstate+3+4), HL
 	LD (kstate+3+6), HL
 	POP HL
-	POP IY
-	JP next
+	JP pop_pc_next
 
 .keys_down
 	; Update shift state
@@ -3676,8 +3676,7 @@ kscan:
 	DEC E
 	JP P, .loop
 	POP HL
-	POP IY
-	JP next
+	JP pop_pc_next
 .row_down:
 	; BC is port, E is counter, A is input, IY is kstate+E
 	; D is old state

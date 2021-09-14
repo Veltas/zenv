@@ -14,8 +14,7 @@ exit:
 	INC IX
 	INC IX
 	PUSH BC
-	POP IY
-	JP next
+	JP pop_pc_next
 
 
 	HEADER leave, "LEAVE", 0
@@ -23,10 +22,9 @@ leave:
 	LD E, (IX+4)
 	LD D, (IX+5)
 	PUSH DE
-	POP IY
 	LD DE, 6
 	ADD IX, DE
-	JP next
+	JP pop_pc_next
 
 
 	HEADER do_raw, "(DO)", 0
