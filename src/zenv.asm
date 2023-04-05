@@ -512,13 +512,12 @@ plus_loop_raw:
 	SBC HL, BC
 	LD A, D
 	AND 0x80
-	JR Z, .non_negative
 	ADD HL, DE
-	JP C, .next_loop
+	JR Z, .non_negative
+	JR C, .next_loop
 	JR .end_loop
 .non_negative:
 	; End loop when iterator-limit + increment carries
-	ADD HL, DE
 	JR C, .end_loop
 .next_loop:
 	; HL = new iterator
