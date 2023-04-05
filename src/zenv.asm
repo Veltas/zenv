@@ -4418,18 +4418,13 @@ loop:
 	HEADER plus_loop, "+LOOP", 1
 plus_loop:
 	CALL colon_code
-	; HERE -ROT
-	DX here
-	DX minus_rot
-	; ( addr do-sys)
-	; POSTPONE LOOP
-	DX loop
-	; ( addr)
-	; ['] (+LOOP) SWAP !
-	DX literal_raw
+	; POSTPONE (+LOOP)
+	DX postpone_raw
 	DW plus_loop_raw
-	DX swap
-	DX store
+	; HERE - C,
+	DX here
+	DX minus
+	DX c_comma
 	; ; IMMEDIATE
 	DX exit
 
