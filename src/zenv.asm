@@ -1096,23 +1096,31 @@ um_star_slash:
 	JR NZ, .loop
 	; DEHLIY = result
 
+	EXX
 	POP BC
-	; BC = n2
+	LD HL, 0
+	EXX
+	; BC' = n2
+	; HL' = rem
 
-	; FIXME: high byte of n2 discarded
 	LD B, 48
-	XOR A
 .loop2:
 	ADD IY, IY
 	ADC HL, HL
 	RL E
 	RL D
-	RLA
-	CP C
+	EXX
+	ADC HL, HL
+	OR A
+	SBC HL, BC
 	JR C, .skip2
+	EXX
 	INC IY
-	SUB C
+	JR .skip3
 .skip2:
+	ADD HL, BC
+	EXX
+.skip3:
 	DJNZ .loop2
 
 	; Restore IY, result MSB in HL, result LSB on stack
