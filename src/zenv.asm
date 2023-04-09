@@ -1792,8 +1792,7 @@ hold:
 	CALL colon_code
 	; \ Decrement >#
 	; -1 ># C+!
-	DX literal_raw
-	DW -1
+	DX true
 	DX to_number_sign
 	DX c_plus_store
 	; \ Store character at (># + 'WORD)
@@ -2002,8 +2001,7 @@ s_to_d:
 	DX zero_less
 	DX if_raw
 	DB .else-$-1
-	DX literal_raw
-	DW -1
+	DX true
 	DX else_skip
 	DB .then-$-1
 .else:
