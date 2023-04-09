@@ -12,5 +12,5 @@ IRC channel [#zenv](https://webchat.oftc.net/?channels=#zenv) on OFTC.
 
 --------------------------------------------------------------------------------
 
-Copyright 2021 (C) - Christopher Leonard, MIT Licence  
+Copyright 2021-2023 (C) - Christopher Leonard, MIT Licence  
 https://github.com/veltas/zenv
