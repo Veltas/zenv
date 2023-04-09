@@ -1578,8 +1578,7 @@ two_literal:
 		; POSTPONE (2LITERAL)
 		DX postpone_raw
 		DW two_literal_raw
-		; SWAP , ,
-		DX swap
+		; , ,
 		DX comma
 		DX comma
 	; THEN ;
