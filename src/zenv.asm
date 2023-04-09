@@ -899,7 +899,6 @@ d_minus:
 	HEADER dub_slash_mod, "DUB/MOD", 0
 dub_slash_mod:
 	LD C, L
-	LD B, H
 	POP DE
 	POP HL
 	LD B, 32
@@ -915,10 +914,9 @@ dub_slash_mod:
 	SUB C
 .div_larger:
 	DJNZ .loop
-	LD C, A
 	PUSH HL
 	PUSH DE
-	LD L, C
+	LD L, A
 	LD H, B
 	JP next
 
