@@ -1,7 +1,7 @@
 ; vi:syntax=z80
 
 ; ZEnv - Forth for the ZX Spectrum
-; Copyright 2021 (C) - Christopher Leonard, MIT Licence
+; Copyright 2021-2023 (C) - Christopher Leonard, MIT Licence
 ; https://github.com/veltas/zenv
 
 ; Master assembly/definitions file
@@ -23,6 +23,7 @@ line_in_val: EQU 0xFC80
 line_in_size_val: EQU 32; 82
 	; Address WORD is stored in
 tick_word_val: EQU 0xFD80
+tick_word_size: EQU 0x81
 	; Address data stack starts at
 param_stack_top: EQU 0xFE78
 param_stack_size: EQU 0x70
@@ -1778,8 +1779,9 @@ to_number_sign:
 	HEADER less_number_sign, "<#", 0
 less_number_sign:
 	CALL colon_code
-	; 0 ># C! ;
-	DX zero_literal
+	; 128 ># C! ;
+	DX raw_char
+	DB 128
 	DX to_number_sign
 	DX c_store
 	DX exit
@@ -1861,14 +1863,14 @@ number_sign:
 	HEADER number_sign_greater, "#>", 0
 number_sign_greater:
 	CALL colon_code
-	; 2DROP  ># C@ 'WORD +  256 ># C@ -  ;
+	; 2DROP  ># C@ 'WORD +  128 ># C@ -  ;
 	DX two_drop
 	DX to_number_sign
 	DX c_fetch
 	DX tick_word
 	DX plus
-	DX literal_raw
-	DW 256
+	DX raw_char
+	DB 128
 	DX to_number_sign
 	DX c_fetch
 	DX minus
