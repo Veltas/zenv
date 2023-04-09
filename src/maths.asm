@@ -1,7 +1,7 @@
 ; vi:syntax=z80
 
 ; ZEnv - Forth for the ZX Spectrum
-; Copyright 2021 (C) - Christopher Leonard, MIT Licence
+; Copyright 2021-2023 (C) - Christopher Leonard, MIT Licence
 ; https://github.com/veltas/zenv
 
 ; Mathematical word definitions
@@ -68,12 +68,6 @@ zero_equals:
 
 	HEADER zero_less, "0<", 0
 zero_less:
-	LD A, H
-	AND 0x80
-	JR Z, .zero_less__non_negative
-	LD HL, 0xFFFF
-	JP next
-.zero_less__non_negative:
-	LD H, A
-	LD L, A
+	ADD HL, HL
+	SBC HL, HL
 	JP next
