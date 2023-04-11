@@ -2811,6 +2811,45 @@ num_punc_question:
 	DX exit
 
 
+	; : DEFER
+	HEADER defer, "DEFER", 0
+defer:
+	CALL colon_code
+	; CREATE 0 , DOES> @ EXECUTE ;
+	DX create: DX zero_literal: DX comma: DX does_raw: CALL does_code
+	DX fetch: DX execute: DX exit
+
+
+	; : IS' ( xt)
+	HEADER is_tick, "IS'", 0
+is_tick:
+	CALL colon_code
+	; ' >BODY ! ;
+	DX tick: DX to_body: DX store: DX exit
+
+
+	; : (IS) ( xt)
+	HEADER is_raw, "(IS)", 0
+is_raw:
+	CALL colon_code
+	; R> TUCK  @ >BODY !  CELL+ >R ;
+	DX r_from: DX tuck: DX fetch: DX to_body: DX store: DX cell_plus
+	DX to_r: DX exit
+
+
+	; : IS
+	HEADER is, "IS", 1
+is:
+	CALL colon_code
+	; STATE @ IF ' POSTPONE (IS) , ELSE IS' THEN ; IMMEDIATE
+	DX state: DX fetch: DX if_raw: DB .else-$-1: DX tick: DX postpone_raw
+	DW is_raw: DX comma: DX else_skip: DB .then-$-1
+.else:
+	DX is_tick
+.then:
+	DX exit
+
+
 	; ( ud addr u -- ud2 addr2 u2)
 	; : >NUMBER
 	HEADER to_number, ">NUMBER", 0
