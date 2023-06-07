@@ -116,6 +116,7 @@ colon_code:
 	; Get new PC from stack
 pop_pc_next:
 	POP IY
+drop: EQU pop_pc_next + 1 ; 'POP IY' is 'DB 0xFD \ POP HL', so +1 is 'drop'
 	; fall through
 
 
@@ -320,8 +321,7 @@ two_store:
 	LD (HL), E
 	INC HL
 	LD (HL), D
-	POP HL
-	JP next
+	JP drop
 
 
 	HEADER two_star, "2*", 0
@@ -394,8 +394,7 @@ sp_store:
 rp_store:
 	PUSH HL
 	POP IX
-	POP HL
-	JP next
+	JP drop
 
 
 	HEADER _abs, "ABS", 0
@@ -444,8 +443,7 @@ cmove:
 	JR Z, .skip
 	LDIR
 .skip:
-	POP HL
-	JP next
+	JP drop
 
 
 	HEADER cmove_up, "CMOVE>", 0
@@ -464,8 +462,7 @@ cmove_up:
 	DEC HL
 	LDDR
 .skip:
-	POP HL
-	JP next
+	JP drop
 
 
 	HEADER loop_raw, "(LOOP)", 0
@@ -484,16 +481,14 @@ loop_raw:
 	LD BC, 6
 	ADD IX, BC
 	INC IY
-	POP HL
-	JP next
+	JP drop
 .loop:
 	LD (IX+0), E
 	LD (IX+1), D
 	LD E, (IY+0)
 	LD D, 0xFF
 	ADD IY, DE
-	POP HL
-	JP next
+	JP drop
 
 
 	HEADER plus_loop_raw, "(+LOOP)", 0
@@ -529,8 +524,7 @@ plus_loop_raw:
 	LD D, 0xFF
 	ADD IY, DE
 .exit:
-	POP HL
-	JP next
+	JP drop
 .end_loop:
 	LD BC, 6
 	ADD IX, BC
@@ -567,8 +561,7 @@ fill:
 	INC DE
 	LDIR
 .exit:
-	POP HL
-	JP next
+	JP drop
 
 
 	HEADER tick_s, "'S", 0
@@ -583,8 +576,7 @@ tick_s:
 tick_r:
 	PUSH HL
 	PUSH IX
-	POP HL
-	JP next
+	JP drop
 
 
 	HEADER u_less_than, "U<", 0
@@ -635,8 +627,7 @@ c_plus_store:
 	LD A, (HL)
 	ADD A, E
 	LD (HL), A
-	POP HL
-	JP next
+	JP drop
 
 
 	HEADER raw_char, "(CHAR)", 0
@@ -658,8 +649,7 @@ if_raw:
 	LD E, (IY-1)
 	ADD IY, DE
 .end:
-	POP HL
-	JP next
+	JP drop
 
 
 	HEADER of_raw, "(OF)", 0
@@ -669,8 +659,7 @@ of_raw:
 	OR A
 	SBC HL, DE
 	JR NZ, .skip
-	POP HL
-	JP next
+	JP drop
 .skip:
 	LD C, (IY-1)
 	LD B, 0
@@ -699,8 +688,7 @@ ms:
 	DEC DE
 	JR .ms_loop
 .end:
-	POP HL
-	JP next
+	JP drop
 
 
 	; CODE P@ ( addr -- cx ) \ Read byte from port
@@ -945,8 +933,7 @@ itone:
 	LD A, L
 	OR A, H
 	JP NZ, .skip
-	POP HL
-	JP next
+	JP drop
 .skip:
 	; Push period
 	PUSH DE
@@ -974,8 +961,7 @@ itone:
 	JR NZ, .loop1
 
 	POP HL
-	POP HL
-	JP next
+	JP drop
 
 
 	; \ -1 if s1<s2, 1 if s1>s2, 0 if s1=s2
@@ -1722,8 +1708,7 @@ emit:
 	DJNZ .draw_loop
 	LD HL, t_col+3
 	INC (HL)
-	POP HL
-	JP next
+	JP drop
 
 .next_line:
 	PUSH DE
@@ -1745,8 +1730,7 @@ emit:
 	LD DE, bs
 	CALL Z, asm_call
 
-	POP HL
-	JP next
+	JP drop
 
 .gbp:
 	LD DE, font + (0x60-0x20)*8
@@ -2113,8 +2097,7 @@ u_dollar_dot:
 	LD HL, ' '
 	PUSH HL
 	CALL asm_call
-	POP HL
-	JP next
+	JP drop
 	; Emit the low nibble of A (if non-zero or D non-zero)
 .emit_nibble:
 	AND 0xF

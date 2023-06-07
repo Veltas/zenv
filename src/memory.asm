@@ -1,7 +1,7 @@
 ; vi:syntax=z80
 
 ; ZEnv - Forth for the ZX Spectrum
-; Copyright 2021 (C) - Christopher Leonard, MIT Licence
+; Copyright 2021-2023 (C) - Christopher Leonard, MIT Licence
 ; https://github.com/veltas/zenv
 
 ; Memory manipulating words
@@ -30,16 +30,14 @@ store:
 	LD (HL), E
 	INC HL
 	LD (HL), D
-	POP HL
-	JP next
+	JP drop
 
 
 	HEADER c_store, "C!", 0
 c_store:
 	POP DE
 	LD (HL), E
-	POP HL
-	JP next
+	JP drop
 
 
 	HEADER plus_store, "+!", 0
@@ -54,5 +52,4 @@ plus_store:
 	LD (HL), D
 	DEC HL
 	LD (HL), E
-	POP HL
-	JP next
+	JP drop

@@ -46,8 +46,7 @@ do_raw:
 	ADD HL, DE
 	LD (IX+4), L
 	LD (IX+5), H
-	POP HL
-	JP next
+	JP drop
 
 
 	HEADER question_do_raw, "(?DO)", 0
@@ -64,8 +63,7 @@ question_do_raw:
 	ADD HL, DE
 	PUSH HL
 	POP IY
-	POP HL
-	JP next
+	JP drop
 .not_equal:
 	ADD HL, DE
 	JR do_raw.common

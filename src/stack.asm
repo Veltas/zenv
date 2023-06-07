@@ -7,17 +7,15 @@
 ; Stack operation words
 
 
-	HEADER drop, "DROP", 0
-drop:
-	POP HL
-	JP next
+	HEADER drop_, "DROP", 0
+drop_:
+	JP drop
 
 
 	HEADER two_drop, "2DROP", 0
 two_drop:
 	POP HL
-	POP HL
-	JP next
+	JP drop
 
 
 	HEADER dup, "DUP", 0
@@ -150,8 +148,7 @@ to_r:
 	DEC IXL
 	LD (IX+0), L
 	LD (IX+1), H
-	POP HL
-	JP next
+	JP drop
 
 
 	HEADER two_to_r, "2>R", 0
@@ -163,8 +160,7 @@ two_to_r:
 	LD (IX+1), H
 	LD (IX+2), E
 	LD (IX+3), D
-	POP HL
-	JP next
+	JP drop
 
 
 	; ( x_u ... x_0 u | x_u ... x_0 x_u)
