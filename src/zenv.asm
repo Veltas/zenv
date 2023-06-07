@@ -24,10 +24,10 @@ line_in_size_val: EQU 32; 82
 	; Address WORD is stored in
 tick_word_val: EQU 0xFD80
 tick_word_size: EQU 0x81
-	; Address data stack starts at
+	; Address data stack starts at, SP must remain within one page
 param_stack_top: EQU 0xFE78
 param_stack_size: EQU 0x70
-	; Address return stack starts at
+	; Address return stack starts at, RP must remain within one page
 return_stack_top: EQU 0xFEF8
 return_stack_size: EQU 0x70
 	; Address of built-in font
@@ -107,8 +107,8 @@ does_code:
 ; CALL colon_code in code
 colon_code:
 	; Push current PC to RS
-	DEC IX
-	DEC IX
+	DEC IXL
+	DEC IXL
 	PUSH IY
 	POP BC
 	LD (IX+0), C
@@ -363,11 +363,11 @@ two_over:
 	LD HL, 4
 	ADD HL, SP
 	LD E, (HL)
-	INC HL
+	INC L
 	LD D, (HL)
-	INC HL
+	INC L
 	LD C, (HL)
-	INC HL
+	INC L
 	LD B, (HL)
 	PUSH BC
 	EX DE, HL

@@ -126,8 +126,8 @@ r_from:
 	PUSH HL
 	LD L, (IX+0)
 	LD H, (IX+1)
-	INC IX
-	INC IX
+	INC IXL
+	INC IXL
 	JP next
 
 
@@ -146,8 +146,8 @@ two_r_from:
 
 	HEADER to_r, ">R", 0
 to_r:
-	DEC IX
-	DEC IX
+	DEC IXL
+	DEC IXL
 	LD (IX+0), L
 	LD (IX+1), H
 	POP HL
@@ -174,7 +174,7 @@ pick:
 	ADD HL, HL
 	ADD HL, SP
 	LD E, (HL)
-	INC HL
+	INC L
 	LD D, (HL)
 	EX DE, HL
 	JP next

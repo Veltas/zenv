@@ -11,8 +11,8 @@
 exit:
 	LD C, (IX+0)
 	LD B, (IX+1)
-	INC IX
-	INC IX
+	INC IXL
+	INC IXL
 	PUSH BC
 	JP pop_pc_next
 
