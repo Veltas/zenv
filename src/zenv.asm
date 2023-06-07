@@ -1471,9 +1471,8 @@ main:
 	DM "HI"
 .s1e:
 	; \ Run interpreter
-	; ABORT ;
+	; ABORT ; -? ALLOT
 	DX abort
-	DX exit
 
 
 	; : WITHIN ( n start end -- flags ) \ Is n within [start, end), or (end,
