@@ -3853,17 +3853,15 @@ two_minus_rot:
 	HEADER d_less_than, "D<", 0
 d_less_than:
 	CALL colon_code
-	; 2SWAP $80000000. D+ 2SWAP $80000000. D+ DU< ;
+	; 2SWAP $8000 + 2SWAP $8000 + DU< ;
 	DX two_swap
-	DX two_literal_raw
+	DX literal_raw
 	DW 0x8000
-	DW 0
-	DX d_plus
+	DX plus
 	DX two_swap
-	DX two_literal_raw
+	DX literal_raw
 	DW 0x8000
-	DW 0
-	DX d_plus
+	DX plus
 	DX du_less_than
 	DX exit
 
