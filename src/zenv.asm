@@ -246,13 +246,6 @@ constant_code:
 	JP next
 
 
-create_code:
-	POP DE
-	PUSH HL
-	EX DE, HL
-	JP next
-
-
 dictionary_start:
 
 

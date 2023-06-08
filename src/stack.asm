@@ -41,6 +41,7 @@ two_swap:
 
 
 	HEADER swap, "SWAP", 0
+create_code:
 swap:
 	POP DE
 	PUSH HL
