@@ -579,6 +579,24 @@ tick_r:
 	JP drop
 
 
+	; : DU< ( $u1 $u2 - $u1<$u2?)
+	HEADER du_less_than, "DU<", 0
+du_less_than:
+	LD C, L
+	LD B, H
+	POP DE
+	POP HL
+	OR A
+	SBC HL, BC
+	POP HL
+	JR Z, common_less_than
+	LD HL, 0
+	JR NC, .false
+	DEC HL
+.false:
+	JP next
+
+
 	HEADER u_less_than, "U<", 0
 u_less_than:
 	EX DE, HL
@@ -837,31 +855,6 @@ du_two_slash:
 	RR D
 	RR E
 	PUSH DE
-	JP next
-
-
-	HEADER du_less_than, "DU<", 0
-du_less_than:
-	LD C, L
-	LD B, H
-	POP DE
-	POP HL
-	OR A
-	SBC HL, BC
-	POP HL
-	JR Z, .equal
-	LD HL, 0
-	JR NC, .false2
-	DEC HL
-.false:
-	JR .false2
-.equal:
-	OR A
-	SBC HL, DE
-	LD HL, 0
-	JR NC, .false2
-	DEC HL
-.false2:
 	JP next
 
 
