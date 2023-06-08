@@ -43,9 +43,7 @@ two_swap:
 	HEADER swap, "SWAP", 0
 create_code:
 swap:
-	POP DE
-	PUSH HL
-	EX DE, HL
+	EX (SP), HL ; 19
 	JP next
 
 
