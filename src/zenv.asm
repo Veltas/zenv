@@ -590,11 +590,7 @@ du_less_than:
 	SBC HL, BC
 	POP HL
 	JR Z, common_less_than
-	LD HL, 0
-	JR NC, .false
-	DEC HL
-.false:
-	JP next
+	JR common_du_less_than
 
 
 	HEADER u_less_than, "U<", 0
@@ -604,6 +600,7 @@ u_less_than:
 common_less_than:
 	OR A
 	SBC HL, DE
+common_du_less_than:
 	LD HL, 0
 	JR C, .lt
 	JP next
