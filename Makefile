@@ -1,5 +1,5 @@
 # ZEnv - Forth for the ZX Spectrum
-# Copyright 2021 (C) - Christopher Leonard, MIT Licence
+# Copyright 2021-2024 (C) - Christopher Leonard, MIT Licence
 # https://github.com/veltas/zenv
 
 # Makefile
