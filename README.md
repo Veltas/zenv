@@ -21,5 +21,5 @@ zenv can be built with direct threading and tokenised direct threading (see
 
 --------------------------------------------------------------------------------
 
-Copyright 2021-2024 (C) - Christopher Leonard, MIT Licence  
+Copyright 2021-2025 (C) - Christopher Leonard, MIT Licence  
 https://github.com/veltas/zenv

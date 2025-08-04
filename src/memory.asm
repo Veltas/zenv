@@ -1,7 +1,7 @@
 ; vi:syntax=z80
 
 ; ZEnv - Forth for the ZX Spectrum
-; Copyright 2021-2024 (C) - Christopher Leonard, MIT Licence
+; Copyright 2021-2025 (C) - Christopher Leonard, MIT Licence
 ; https://github.com/veltas/zenv
 
 ; Memory manipulating words
