@@ -8,7 +8,7 @@
 
 tokenised: EQU 1
 
-t_attr_init: EQU 0x38
+t_attr_init: EQU 0x47
 load_addr: EQU 0x8000
 disp_file_val: EQU 0x4000
 disp_size_val: EQU 0x1800
