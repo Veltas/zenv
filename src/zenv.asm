@@ -2819,6 +2819,34 @@ is:
 	DX exit
 
 
+	; : DIGIT> ( c -- n|-1 )
+	HEADER digit_from, "DIGIT>", 0
+digit_from:
+	CALL colon_code
+	; DUP [CHAR] 0 [ CHAR 9 1+ ] LITERAL WITHIN  IF
+	DX dup: DX raw_char: DB '0': DX raw_char: DB '9'+1: DX within: DX if_raw
+	DB .else-$-1
+		; [CHAR] 0 -
+		DX raw_char: DB '0': DX minus
+	; ELSE  [ CHAR A 1- ] LITERAL OVER U<  IF
+	DX else_skip: DB .then-$-1
+.else:
+	DX raw_char: DB 'A' - 1: DX over: DX u_less_than: DX if_raw
+	DB .else2-$-1
+		; [ CHAR A 10 - ] LITERAL -
+		DX raw_char: DB 'A'-10: DX minus
+	; ELSE  DROP -1  THEN THEN
+	DX else_skip: DB .then-$-1
+.else2:
+	DX drop: DX true
+.then:
+	; DUP BASE @ U< 0= IF  DROP -1  THEN ;
+	DX dup: DX base: DX fetch: DX u_less_than: DX zero_equals: DX if_raw
+	DB .then2-$-1: DX drop: DX true
+.then2:
+	DX exit
+
+
 	; ( ud addr u -- ud2 addr2 u2)
 	; : >NUMBER
 	HEADER to_number, ">NUMBER", 0
@@ -2826,81 +2854,29 @@ to_number:
 	CALL colon_code
 	; \ Loop while chars remaining
 	; DUP IF BEGIN
-	DX dup
-	DX if_raw
-	DB .then_skip-$-1
+	DX dup: DX if_raw: DB .then_skip-$-1
 .begin:
-		; \ Get char
-		; OVER C@
-		DX over
-		DX c_fetch
-		; ( ud addr u c)
-		; \ Handle 0-9 / a-z apart
-		; DUP [CHAR] 0 [ CHAR 9 1+ ] LITERAL WITHIN IF
-		DX dup
-		DX raw_char
-		DB '0'
-		DX raw_char
-		DB '9'+1
-		DX within
-		DX if_raw
-		DB .else-$-1
-			; \ Convert char to number
-			; [CHAR] 0 -
-			DX raw_char
-			DB '0'
-			DX minus
-			; ( ud addr u n)
-		; ELSE
-		DX else_skip
-		DB .then_apart-$-1
-.else:
-			; \ Convert char to number
-			; [ CHAR A 10 - ] -
-			DX raw_char
-			DB 'A'-10
-			DX minus
-			; ( ud addr u n)
-		; THEN
-.then_apart:
-		; \ Must be within current base
-		; DUP BASE @ 0 WITHIN IF DROP EXIT THEN
-		DX dup
-		DX base
-		DX fetch
-		DX zero_literal
-		DX within
-		DX if_raw
-		DB .then_base-$-1
-		DX drop
-		DX exit
-.then_base:
+		; \ Read digit
+		; OVER C@  DIGIT>  DUP -1 = IF DROP EXIT THEN
+		DX over: DX c_fetch: DX digit_from: DX dup: DX true: DX equals
+		DX if_raw: DB .then-$-1: DX drop: DX exit
+.then:
+		; ( ud addr u d )
 		; 0 2ROT
-		DX zero_literal
-		DX two_rot
+		DX zero_literal: DX two_rot
 		; ( addr u dn ud)
 		; \ Multiply current number by base
 		; BASE @ 1 M*/
-		DX base
-		DX fetch
-		DX one_literal
-		DX m_star_slash
+		DX base: DX fetch: DX one_literal: DX m_star_slash
 		; \ Add digit to current number
 		; D+ 2SWAP
-		DX d_plus
-		DX two_swap
+		DX d_plus: DX two_swap
 		; ( ud addr u)
 		; \ Next char
-		; SWAP 1+ SWAP 1-
-		DX swap
-		DX one_plus
-		DX swap
-		DX one_minus
+		; 1 /STRING
+		DX one_literal: DX slash_string
 	; DUP 0= UNTIL THEN ;
-	DX dup
-	DX zero_equals
-	DX until_raw
-	DB .begin-$+256
+	DX dup: DX zero_equals: DX until_raw: DB .begin-$+256
 .then_skip:
 	DX exit
 
