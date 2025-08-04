@@ -595,11 +595,15 @@ common_less_than:
 	SBC HL, DE
 common_du_less_than:
 	LD HL, 0
-	JR C, .lt
-	JP next
-.lt:
+	JP NC, next
 	DEC HL
 	JP next
+
+
+	HEADER u_greater_than, "U>", 0
+u_greater_than:
+	POP DE
+	JR common_less_than
 
 
 	HEADER less_than, "<", 0
