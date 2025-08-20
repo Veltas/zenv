@@ -24,15 +24,14 @@ dup:
 	JP next
 
 
-	HEADER two_swap, "2SWAP", 0
-two_swap:
-	POP BC
-	POP DE
-	POP AF
-	PUSH BC
+	HEADER two_r_fetch, "2R@", 0
+two_r_fetch:
 	PUSH HL
-	PUSH AF
-	EX DE, HL
+	LD L, (IX+0)
+	LD H, (IX+1)
+	LD E, (IX+2)
+	LD D, (IX+3)
+	PUSH DE
 	JP next
 
 
@@ -107,14 +106,15 @@ r_fetch:
 	JP next
 
 
-	HEADER two_r_fetch, "2R@", 0
-two_r_fetch:
+	HEADER two_swap, "2SWAP", 0
+two_swap:
+	POP BC
+	POP DE
+	POP AF
+	PUSH BC
 	PUSH HL
-	LD L, (IX+0)
-	LD H, (IX+1)
-	LD E, (IX+2)
-	LD D, (IX+3)
-	PUSH DE
+	PUSH AF
+	EX DE, HL
 	JP next
 
 

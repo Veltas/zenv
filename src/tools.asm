@@ -10,6 +10,7 @@
 	; \ Print hexdump of memory
 	; ( a u --)
 	; : HEXDUMP
+	HEADER hexdump, "HEXDUMP", 0
 hexdump:
 	CALL colon_code
 	; BASE @ -ROT  HEX

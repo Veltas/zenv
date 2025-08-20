@@ -525,17 +525,6 @@ plus_loop_raw:
 	JR .exit
 
 
-	HEADER over_two, "OVER2", 0
-over_two:
-	POP AF
-	POP DE
-	PUSH DE
-	PUSH AF
-	PUSH HL
-	EX DE, HL
-	JP next
-
-
 	HEADER fill, "FILL", 0
 fill:
 	EX DE, HL
@@ -729,16 +718,6 @@ p_store:
 halt_:
 	HALT
 	JR p_fetch_next
-
-
-	HEADER tuck2, "TUCK2", 0
-tuck2:
-	POP DE
-	POP BC
-	PUSH HL
-	PUSH BC
-	PUSH DE
-	JP next
 
 
 	HEADER d_plus, "D+", 0
@@ -1212,10 +1191,10 @@ here:
 
 
 ; Points to most recently defined symbol
-	HEADER sym_last, "SYM-LAST", 0
-sym_last:
+	HEADER last, "LAST", 0
+last:
 	CALL create_code
-	DW sym_last_init
+	DW last_init
 
 
 ; non-zero while compiling
@@ -1395,8 +1374,8 @@ type:
 	HEADER words, "WORDS", 0
 words:
 	CALL colon_code
-	; SYM-LAST @
-	DX sym_last
+	; LAST @
+	DX last
 	DX fetch
 	; BEGIN
 .begin:
@@ -2002,9 +1981,9 @@ dot_r:
 
 
 	; \ Set border to attr
-	; ( attr ) : BRDR!
-	HEADER brdr_store, "BRDR!", 0
-brdr_store:
+	; ( attr ) : BORDER
+	HEADER border, "BORDER", 0
+border:
 	CALL colon_code
 	; 7 AND  ULA P@  0xF8 AND  OR  ULA P! ;
 	DX raw_char
@@ -2027,13 +2006,13 @@ brdr_store:
 page:
 	CALL colon_code
 	; \ Match border to T-ATTR
-	; T-ATTR C@  3 RSHIFT  BRDR!
+	; T-ATTR C@  3 RSHIFT  BORDER
 	DX t_attr
 	DX c_fetch
 	DX raw_char
 	DB 3
 	DX rshift
-	DX brdr_store
+	DX border
 	; \ Reset terminal col/row
 	; 0 0 AT-XY
 	DX zero_literal
@@ -2406,7 +2385,7 @@ sfind:
 	; B = size of name
 	LD B, L
 	; Load first symbol
-	LD HL, (sym_last+3)
+	LD HL, (last+3)
 	; Start loop
 	JR .loop_cond
 .loop:
@@ -2664,11 +2643,11 @@ cparse:
 	; PARSE
 	DX parse
 	; ( addr u)
-	; DUP 256 >= ABORT" long name"
+	; DUP 255 > ABORT" long name"
 	DX dup
-	DX literal_raw
-	DW 256
-	DX greater_than_or_equal
+	DX raw_char
+	DB 255
+	DX greater_than
 	DX abort_quote_raw
 	DB .e1-.s1
 .s1:
@@ -3200,11 +3179,12 @@ ula:
 	HEADER d_plus_store, "D+!", 0
 d_plus_store:
 	CALL colon_code
-	; TUCK2 2@ D+ ROT 2! ;
-	DX tuck2
+	; DUP >R 2@ D+ R> 2! ;
+	DX dup
+	DX to_r
 	DX two_fetch
 	DX d_plus
-	DX rot
+	DX r_from
 	DX two_store
 	DX exit
 
@@ -3333,7 +3313,7 @@ min:
 
 
 	; \ Store CAPS LOCK state
-	; CREATE CAPS 1 C,
+	; CREATE CAPS TRUE C,
 	HEADER caps, "CAPS", 0
 caps:
 	CALL create_code
@@ -3384,59 +3364,6 @@ ekey:
 .then:
 	; ;
 	DX exit
-
-
-	; \ Address of the character key map in ROM
-	; $205 ROM-KMAP CONSTANT
-	HEADER rom_kmap, "ROM-KMAP", 0
-rom_kmap:
-	CALL constant_code
-	DW 0x205
-
-
-rom_smap1_val: EQU 0x26A
-	; \ Address of one alphabet key map used with symbol shift
-	; $26A ROM-SMAP1 CONSTANT
-	HEADER rom_smap1, "ROM-SMAP1", 0
-rom_smap1:
-	CALL constant_code
-	DW rom_smap1_val
-
-
-rom_smap2_val: EQU 0x246
-	; \ Address of lower priority alphabet key map used with symbol shift
-	; $246 ROM-SMAP2 CONSTANT
-	HEADER rom_smap2, "ROM-SMAP2", 0
-rom_smap2:
-	CALL constant_code
-	DW rom_smap2_val
-
-
-	; \ Mapping of number keys to symbol shift characters
-	; CREATE NSYM-MAP
-	HEADER nsym_map, "NSYM-MAP", 0
-nsym_map:
-	CALL create_code
-	; '_' C,
-	DB '_'
-	; '!' C,
-	DB '!'
-	; '@' C,
-	DB '@'
-	; '#' C,
-	DB '#'
-	; '$' C,
-	DB '$'
-	; '%' C,
-	DB '%'
-	; '&' C,
-	DB '&'
-	; ''' C,
-	DB "'"
-	; '(' C,
-	DB '('
-	; ')' C,
-	DB ')'
 
 
 	; CREATE KMAP
@@ -3569,22 +3496,6 @@ ekey_to_char:
 	; THEN
 .then2:
 	; ;
-	DX exit
-
-
-	HEADER less_than_or_equal, "<=", 0
-less_than_or_equal:
-	CALL colon_code
-	DX greater_than
-	DX zero_equals
-	DX exit
-
-
-	HEADER greater_than_or_equal, ">=", 0
-greater_than_or_equal:
-	CALL colon_code
-	DX less_than
-	DX zero_equals
 	DX exit
 
 
@@ -4060,8 +3971,8 @@ cstr_comma:
 sym_comma:
 	CALL colon_code
 	; \ Write back-link
-	; SYM-LAST @ ,
-	DX sym_last
+	; LAST @ ,
+	DX last
 	DX fetch
 	DX comma
 	; \ Parse the name
@@ -4078,11 +3989,11 @@ sym_comma:
 	DM "missing name"
 .e1:
 	; \ Must be smaller than 64 chars
-	; DUP 64 >= ABORT" long name"
+	; DUP 63 > ABORT" long name"
 	DX dup
 	DX raw_char
-	DB 64
-	DX greater_than_or_equal
+	DB 63
+	DX greater_than
 	DX abort_quote_raw
 	DB .e2-.s2
 .s2:
@@ -4115,8 +4026,8 @@ create:
 	DW create_code
 	DX _call
 	; \ Make symbol findable
-	; SYM-LAST ! ; DECIMAL
-	DX sym_last
+	; LAST ! ; DECIMAL
+	DX last
 	DX store
 	DX exit
 
@@ -4228,8 +4139,8 @@ semicolon:
 	DM "unbalanced"
 .e1:
 	; \ Make definition findable
-	; SYM-LAST !
-	DX sym_last
+	; LAST !
+	DX last
 	DX store
 	; \ Return to interpreter mode
 	; POSTPONE [ ; IMMEDIATE
@@ -4939,8 +4850,8 @@ bracket_char:
 	HEADER instead, "INSTEAD", 0
 instead:
 	CALL colon_code
-	; SYM-LAST @ >SYM + 1+ ! ;
-	DX sym_last
+	; LAST @ >SYM + 1+ ! ;
+	DX last
 	DX fetch
 	DX to_sym
 	DX plus
@@ -5036,8 +4947,8 @@ fm_slash_mod:
 	HEADER immediate, "IMMEDIATE", 0
 immediate:
 	CALL colon_code
-	; SYM-LAST @ CELL+
-	DX sym_last
+	; LAST @ CELL+
+	DX last
 	DX fetch
 	DX cell_plus
 	; ( addr)
@@ -5165,4 +5076,4 @@ key_caps_lock: EQU 0x1C ; ASCII File separator
 
 h_init:
 
-sym_last_init: EQU this_header
+last_init: EQU this_header

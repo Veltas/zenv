@@ -16,8 +16,8 @@ forget:
 	; BL WORD
 	DX bl: DX word
 	; ( str)
-	; SYM-LAST @
-	DX sym_last: DX fetch
+	; LAST @
+	DX last: DX fetch
 	; ( str sym)
 	; BEGIN
 .begin:
@@ -42,5 +42,5 @@ forget:
 	; H !
 	DX h_: DX store
 	; ( prev-sym)
-	; SYM-LAST ! ;
-	DX sym_last: DX store: DX exit
+	; LAST ! ;
+	DX last: DX store: DX exit

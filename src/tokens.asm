@@ -94,6 +94,8 @@ question_do_raw_tok:
 	DW question_do_raw
 loop_raw_tok:
 	DW loop_raw
+plus_loop_raw_tok:
+	DW plus_loop_raw
 compile_comma_tok:
 	DW compile_comma
 negate_tok:
@@ -116,6 +118,8 @@ dot_quote_raw_tok:
 	DW dot_quote_raw
 abort_quote_raw_tok:
 	DW abort_quote_raw
+here_tok:
+	DW here
 t_col_tok:
 	DW t_col
 t_row_tok:
@@ -126,4 +130,6 @@ cell_plus_tok:
 	DW cell_plus
 cells_tok:
 	DW cells
+zero_less_tok:
+	DW zero_less
 	ENDIF
