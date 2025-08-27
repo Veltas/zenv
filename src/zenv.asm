@@ -7,8 +7,10 @@
 ; Master assembly/definitions file
 
 tokenised: EQU 1
+blocks: EQU 0
 
 t_attr_init: EQU 0x47
+brdr_init: EQU 0x1
 load_addr: EQU 0x8000
 disp_file_val: EQU 0x4000
 disp_size_val: EQU 0x1800
@@ -256,6 +258,9 @@ dictionary_start:
 	INCLUDE "control.asm"
 	INCLUDE "tools.asm"
 	INCLUDE "dict.asm"
+	IF blocks
+		INCLUDE "blocks.asm"
+	ENDIF
 
 
 	HEADER false, "FALSE", 0
@@ -878,11 +883,11 @@ dub_slash_mod:
 	; CODE ITONE ( u1 u2 -- ) \ half-oscillations period
 	HEADER itone, "ITONE", 0
 itone:
-	LD A, (t_attr+3)
-	RRCA
-	RRCA
-	RRCA
+	LD A, (brdr+3)
 	AND 7
+	;RRCA
+	;RRCA
+	;RRCA
 	EX DE, HL
 	LD HL, 0
 	SBC HL, DE
@@ -984,6 +989,39 @@ compare:
 .cont2:
 	POP DE
 	JP next
+
+
+	; \ Find addr2 u2 in addr1 u1
+	; : SEARCH ( addr1 u1 addr2 u2 -- addr1 u1 false | addr3 u3 true )
+		; 2>R 2DUP  BEGIN DUP R@ < 0= WHILE
+			; OVER R@ 2R@ COMPARE 0= IF
+				; 2SWAP 2DROP 2R> 2DROP TRUE EXIT
+			; THEN
+		; 1 /STRING  REPEAT
+		; 2DROP 2R> 2DROP FALSE ;
+	HEADER search, "SEARCH", 0
+search:
+	CALL colon_code
+	DX two_to_r: DX two_dup
+.begin:
+	DX dup: DX r_fetch: DX less_than: DX zero_equals: DX if_raw
+	DB .repeat-$-1
+	DX over: DX r_fetch: DX two_r_fetch: DX compare: DX zero_equals
+	DX if_raw: DB .then-$-1
+	DX two_swap: DX two_drop: DX two_r_from: DX two_drop: DX true: DX exit
+.then:
+	DX one_literal: DX slash_string: DX again_raw: DB .begin-$+256
+.repeat:
+	DX two_drop: DX two_r_from: DX two_drop: DX false: DX exit
+
+
+	; : BLANK ( addr u -- )   BL FILL ;
+	HEADER blank, "BLANK", 0
+blank:
+	CALL colon_code
+	DX bl
+	DX fill
+	DX exit
 
 
 	; ( n1 n2 -- d)
@@ -1217,6 +1255,12 @@ t_attr:
 	DB t_attr_init
 
 
+	HEADER brdr, "BRDR", 0
+brdr:
+	CALL create_code
+	DB brdr_init
+
+
 	HEADER t_col, "T-COL", 0
 t_col:
 	CALL create_code
@@ -1426,15 +1470,20 @@ key:
 	HEADER main, "MAIN", 0
 main:
 	CALL colon_code
+	; \ Set border
+	; BRDR C@ BORDER
+	DX brdr
+	DX c_fetch
+	DX border
 	; \ Clear screen
 	; PAGE
 	DX page
 	; \ Greeting
-	; ." HI"
+	; ." hi"
 	DX dot_quote_raw
 	DB .s1e-.s1
 .s1:
-	DM "HI"
+	DM "hi"
 .s1e:
 	; \ Run interpreter
 	; ABORT ; -? ALLOT
@@ -1671,6 +1720,22 @@ emit:
 	INC DE
 	INC H
 	DJNZ .draw_loop
+
+	LD H, 0
+	LD A, (t_row+3)
+	LD L, A
+	ADD HL, HL
+	ADD HL, HL
+	ADD HL, HL
+	ADD HL, HL
+	ADD HL, HL
+	LD A, (t_col+3)
+	LD C, A
+	LD B, attr_file_val>>8
+	ADD HL, BC
+	LD A, (t_attr+3)
+	LD (HL), A
+
 	LD HL, t_col+3
 	INC (HL)
 	JP drop
@@ -1985,19 +2050,12 @@ dot_r:
 	HEADER border, "BORDER", 0
 border:
 	CALL colon_code
-	; 7 AND  ULA P@  0xF8 AND  OR  ULA P! ;
-	DX raw_char
-	DB 7
-	DX and
-	DX ula
-	DX p_fetch
-	DX raw_char
-	DB 0xF8
-	DX and
-	DX or
-	DX ula
-	DX p_store
-	DX exit
+	; 7 AND
+	DX raw_char: DB 7: DX and
+	; DUP BRDR C!
+	DX dup: DX brdr: DX c_store
+	; ULA P! ;
+	DX ula: DX p_store: DX exit
 
 
 	; \ Clear screen, reset terminal to top-left
@@ -2005,14 +2063,6 @@ border:
 	HEADER page, "PAGE", 0
 page:
 	CALL colon_code
-	; \ Match border to T-ATTR
-	; T-ATTR C@  3 RSHIFT  BORDER
-	DX t_attr
-	DX c_fetch
-	DX raw_char
-	DB 3
-	DX rshift
-	DX border
 	; \ Reset terminal col/row
 	; 0 0 AT-XY
 	DX zero_literal
@@ -4409,35 +4459,44 @@ interpret:
 	DX exit
 
 
+	; : REFILL ( -?)  CR -READ  0 >IN !  IN# !  'IN !  TRUE ;
+	HEADER refill, "REFILL", 0
+refill:
+	CALL colon_code
+	DX cr
+	DX line_read
+	DX zero_literal
+	DX to_in
+	DX store
+	DX in_size
+	DX store
+	DX tick_in
+	DX store
+	DX true
+	DX exit
+
+
 	; : QUIT ( -- ) \ Reset return stack then start interpretation
 	HEADER quit, "QUIT", 0
 quit:
 	CALL colon_code
-	; R0 RP! CR
+	; R0 RP!
 	DX r_zero
 	DX rp_store
-	DX cr
 	; POSTPONE [
 	DX left_bracket
 	; BEGIN
 .begin:
-		; -READ  0 >IN !  IN# !  'IN !  SPACE INTERPRET ." ok" CR
-		DX line_read
-		DX zero_literal
-		DX to_in
-		DX store
-		DX in_size
-		DX store
-		DX tick_in
-		DX store
+		; REFILL DROP  SPACE INTERPRET ."  ok"
+		DX refill
+		DX drop
 		DX space
 		DX interpret
 		DX dot_quote_raw
 		DB .s1e-.s1
 .s1:
-		DM "ok"
+		DM " ok"
 .s1e:
-		DX cr
 	; AGAIN ; -? ALLOT
 	DX again_raw
 	DB .begin-$+256
